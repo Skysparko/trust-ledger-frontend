@@ -3,19 +3,34 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const isPortal = request.nextUrl.pathname.startsWith("/portal");
-  if (!isPortal) return NextResponse.next();
+  const isAdmin = request.nextUrl.pathname.startsWith("/admin");
+  const isAdminLogin = request.nextUrl.pathname === "/admin/login";
 
-  const auth = request.cookies.get("auth")?.value;
-  if (!auth) {
-    const url = new URL("/login", request.url);
-    url.searchParams.set("from", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+  // Portal protection
+  if (isPortal && !isAdmin) {
+    const auth = request.cookies.get("auth")?.value;
+    if (!auth) {
+      const url = new URL("/login", request.url);
+      url.searchParams.set("from", request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
   }
+
+  // Admin protection (except login page)
+  if (isAdmin && !isAdminLogin) {
+    const adminAuth = request.cookies.get("admin_auth")?.value;
+    if (!adminAuth) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+    return NextResponse.next();
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/portal/:path*"],
+  matcher: ["/portal/:path*", "/admin/:path*"],
 };
 
 
