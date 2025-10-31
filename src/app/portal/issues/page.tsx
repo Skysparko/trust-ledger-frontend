@@ -7,14 +7,21 @@ import { Wind, Sun } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function IssuesPage() {
+  const openOpportunities = issuances.filter(iss => iss.status === "open");
+  
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-white">Issues</h1>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">
+          Investment Opportunities
+        </h1>
+        <p className="text-lg text-zinc-400 font-light">
+          Explore available bond offerings and renewable energy investments
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {issuances.map((issuance, index) => (
+        {openOpportunities.map((issuance, index) => (
           <motion.div
             key={issuance.id}
             initial={{ opacity: 0, y: 20 }}
@@ -45,7 +52,7 @@ export default function IssuesPage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="grid grid-cols-3 gap-4 border-t border-zinc-800/50 pt-4">
                     <div>
                       <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
@@ -64,6 +71,24 @@ export default function IssuesPage() {
                         Min
                       </div>
                       <div className="mt-1 text-lg font-bold text-white">€{issuance.minInvestment}</div>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-zinc-800/50">
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="text-zinc-500">Funding Progress</span>
+                      <span className="font-semibold text-white">
+                        {Math.round((issuance.currentFunding / issuance.totalFundingTarget) * 100)}%
+                      </span>
+                    </div>
+                    <div className="relative h-2 overflow-hidden rounded-full bg-zinc-800/50">
+                      <div 
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
+                        style={{ width: `${(issuance.currentFunding / issuance.totalFundingTarget) * 100}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-2 text-xs text-zinc-400">
+                      <span>€{(issuance.currentFunding / 1000).toFixed(0)}k / €{(issuance.totalFundingTarget / 1000).toFixed(0)}k</span>
+                      <span>{issuance.investorsCount} investors</span>
                     </div>
                   </div>
                 </CardContent>

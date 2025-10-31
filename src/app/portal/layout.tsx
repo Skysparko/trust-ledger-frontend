@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Home, FileText, Bell, User2, LogOut, BadgePercent, ChevronDown, Package, Wallet } from "lucide-react";
+import { Home, FileText, Bell, User2, LogOut, ChevronDown, Package, Wallet } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logout, hydrateFromStorage } from "@/store/slices/auth";
 import { useEffect, useState } from "react";
@@ -185,8 +185,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </div>
           <nav className="flex flex-col gap-1.5">
             <NavItem href="/portal/dashboard" label="Dashboard" icon={Home} />
-            <NavItem href="/portal/issues" label="Issues" icon={FileText} />
-            <NavItem href="/uitgiften" label="Invest" icon={BadgePercent} />
+            <NavItem href="/portal/issues" label="Investment Opportunities" icon={FileText} />
             <NavItem href="/portal/owned-assets" label="Owned Assets" icon={Package} />
             <NavItem href="/portal/transactions/fiat" label="Transactions" icon={Wallet} />
           </nav>
