@@ -364,7 +364,7 @@ export default function BondDetailPage() {
                   <TrendingUp className="h-4 w-4" />
                   Average Investment
                 </div>
-                <div className="text-2xl font-bold text-white">€{investorsCount > 0 ? (totalAmount / investorsCount).toLocaleString(0) : '0'}</div>
+                <div className="text-2xl font-bold text-white">€{investorsCount > 0 ? (totalAmount / investorsCount).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '0'}</div>
               </div>
             </CardContent>
           </Card>
