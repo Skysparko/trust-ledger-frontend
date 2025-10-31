@@ -1,0 +1,103 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { projects } from "@/data/projects";
+import { ProjectCard } from "@/components/cards/ProjectCard";
+import { Select } from "@/components/ui/select";
+import { motion } from "framer-motion";
+import { SectionHeader } from "@/components/sections/SectionHeader";
+import { staggerContainer, fadeUp } from "@/lib/motion";
+
+export default function ProjectenPage() {
+  const [type, setType] = useState<string>("all");
+  const [status, setStatus] = useState<string>("all");
+  const [location, setLocation] = useState<string>("all");
+
+  const uniqueLocations = useMemo(() => {
+    const set = new Set(projects.map((p) => p.location));
+    return Array.from(set);
+  }, []);
+
+  const filtered = useMemo(() => {
+    return projects.filter((p) => {
+      if (type !== "all" && p.type.toLowerCase() !== type) return false;
+      if (status !== "all" && p.status !== status) return false;
+      if (location !== "all" && p.location !== location) return false;
+      return true;
+    });
+  }, [type, status, location]);
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+      >
+        <motion.div
+          className="absolute top-20 left-10 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-emerald-400/10 via-teal-400/10 to-transparent blur-3xl"
+          animate={{ x: [0, 30, -20, 0], y: [0, -25, 20, 0], scale: [1, 1.2, 0.9, 1] }}
+          transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-20 right-10 h-96 w-96 rounded-full bg-gradient-to-br from-indigo-400/10 via-purple-400/10 to-transparent blur-3xl"
+          animate={{ x: [0, -25, 20, 0], y: [0, 30, -15, 0], scale: [1, 1.15, 0.9, 1] }}
+          transition={{ duration: 21, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </motion.div>
+      <div className="relative mx-auto max-w-7xl px-4 py-12">
+        <SectionHeader title="Projects" subtitle="Track development and live assets" className="mb-8" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3"
+        >
+          <Select
+            options={[
+              { label: "All types", value: "all" },
+              { label: "Wind", value: "wind" },
+              { label: "Solar", value: "solar" },
+            ]}
+            defaultValue="all"
+            onValueChange={setType}
+          />
+          <Select
+            options={[
+              { label: "All statuses", value: "all" },
+              { label: "In development", value: "In development" },
+              { label: "Live", value: "Live" },
+              { label: "Completed", value: "Completed" },
+            ]}
+            defaultValue="all"
+            onValueChange={setStatus}
+          />
+          <Select
+            options={[{ label: "All locations", value: "all" }, ...uniqueLocations.map((l) => ({ label: l, value: l }))]}
+            defaultValue="all"
+            onValueChange={setLocation}
+          />
+        </motion.div>
+        <motion.div
+          variants={staggerContainer(0.08)}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-80px" }}
+          className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {filtered.map((p) => (
+            <motion.div key={p.id} variants={fadeUp}>
+              <ProjectCard project={p} />
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+
