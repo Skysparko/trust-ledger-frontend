@@ -3,10 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { hydrateFromStorage, logout } from "@/store/slices/auth";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -20,10 +22,19 @@ const navItems = [
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
   const { scrollYProgress } = useScroll();
   const progressX = useSpring(scrollYProgress, { stiffness: 140, damping: 20, mass: 0.2 });
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+  const user = useAppSelector((s) => s.auth.user);
+
+  useEffect(() => {
+    dispatch(hydrateFromStorage());
+  }, [dispatch]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -31,6 +42,21 @@ export function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    // Close user menu when clicking outside
+    if (userMenuOpen) {
+      const handleClickOutside = () => setUserMenuOpen(false);
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [userMenuOpen]);
+
+  function handleLogout() {
+    dispatch(logout());
+    router.push("/");
+    setUserMenuOpen(false);
+  }
 
   return (
     <header className={
@@ -75,12 +101,78 @@ export function Navbar() {
             );
           })}
           <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800" />
-          <Button asChild variant="outline" className="hover:-translate-y-0.5">
-            <Link href="/login">Login</Link>
-          </Button>
-          <Button asChild className="hidden translate-y-0 lg:inline-flex hover:-translate-y-0.5">
-            <Link href="/uitgiften">Get started</Link>
-          </Button>
+          {isAuthenticated && user ? (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUserMenuOpen(!userMenuOpen);
+                }}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-black dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-semibold text-white">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="hidden lg:inline">{user.name}</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-zinc-200 bg-white/95 backdrop-blur-xl shadow-xl dark:border-zinc-800 dark:bg-zinc-950/95"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-2">
+                      <div className="rounded-lg px-3 py-2 text-sm font-semibold text-zinc-900 dark:text-white">
+                        {user.name}
+                      </div>
+                      <div className="rounded-lg px-3 py-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        {user.email}
+                      </div>
+                      <div className="my-2 h-px bg-zinc-200 dark:bg-zinc-800" />
+                      <Link
+                        href="/portal/dashboard"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-black dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/portal/profile"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-black dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <User className="h-4 w-4" />
+                        Profile
+                      </Link>
+                      <div className="my-2 h-px bg-zinc-200 dark:bg-zinc-800" />
+                      <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <>
+              <Button asChild variant="outline" className="hover:-translate-y-0.5">
+                <Link href="/login">Login</Link>
+              </Button>
+              <Button asChild className="hidden translate-y-0 lg:inline-flex hover:-translate-y-0.5">
+                <Link href="/uitgiften">Get started</Link>
+              </Button>
+            </>
+          )}
         </nav>
         <button
           className="inline-flex items-center justify-center rounded-md p-2 outline-none ring-1 ring-transparent transition-all hover:bg-zinc-100 focus-visible:ring-blue-500/50 dark:hover:bg-zinc-900 md:hidden"
@@ -116,14 +208,51 @@ export function Navbar() {
                   </Link>
                 );
               })}
-              <div className="mt-2 flex gap-2">
-                <Button asChild className="flex-1">
-                  <Link href="/login">Login</Link>
-                </Button>
-                <Button asChild variant="outline" className="flex-1">
-                  <Link href="/uitgiften">Get started</Link>
-                </Button>
-              </div>
+              {isAuthenticated && user ? (
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2 rounded-lg px-3 py-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-xs font-semibold text-white">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-zinc-900 dark:text-white">{user.name}</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">{user.email}</div>
+                    </div>
+                  </div>
+                  <Link
+                    href="/portal/dashboard"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-black dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    href="/portal/profile"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-black dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setOpen(false);
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-2 flex gap-2">
+                  <Button asChild className="flex-1">
+                    <Link href="/login" onClick={() => setOpen(false)}>Login</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="flex-1">
+                    <Link href="/uitgiften" onClick={() => setOpen(false)}>Get started</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
