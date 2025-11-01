@@ -21,7 +21,7 @@ export function Footer() {
         <div className="space-y-3">
           <div className="text-lg font-semibold">TrustLedger</div>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Sustainable investing made accessible to everyone.
+            Investment opportunities made accessible to everyone.
           </p>
         </div>
         <div className="space-y-2">

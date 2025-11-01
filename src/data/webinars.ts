@@ -14,7 +14,7 @@ export const webinars: Webinar[] = [
   },
   {
     id: "web-2",
-    title: "Wind vs Solar: risk and return",
+    title: "Diversifying your investment portfolio: risk and return",
     date: "2025-12-02",
     speaker: "A. Analyst",
   },

@@ -32,7 +32,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
-          Invest in sustainable energy with{" "}
+          Invest in companies with{" "}
           <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
             transparent returns
           </span>
@@ -43,7 +43,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.7, ease: "easeOut" }}
         >
-          Discover wind and solar projects across the Netherlands. Start from €100 and help accelerate the energy transition.
+          Discover investment opportunities across various sectors. Start from €100 and build your portfolio with confidence.
         </motion.p>
         <motion.div
           className="mt-10 flex flex-wrap gap-4"

@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { issuances } from "@/data/issuances";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wind, Sun, MapPin, Calendar, Euro, TrendingUp, Building2, Users, Shield, FileText, Clock, CheckCircle2, Info } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Euro, TrendingUp, Building2, Users, Shield, FileText, Clock, CheckCircle2, Info } from "lucide-react";
 import { useAppDispatch } from "@/store";
 import { openSubscription } from "@/store/slices/ui";
 import { useMemo, useState, useEffect } from "react";
@@ -67,16 +67,8 @@ export default function BondDetailPage() {
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div className="flex-1">
               <div className="flex items-start gap-4">
-                <div className={`flex h-16 w-16 items-center justify-center rounded-xl ring-2 ${
-                  bond.type === "Wind" 
-                    ? "bg-blue-500/10 ring-blue-500/20" 
-                    : "bg-amber-500/10 ring-amber-500/20"
-                }`}>
-                  {bond.type === "Wind" ? (
-                    <Wind className="h-8 w-8 text-blue-400" />
-                  ) : (
-                    <Sun className="h-8 w-8 text-amber-400" />
-                  )}
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl ring-2 bg-blue-500/10 ring-blue-500/20">
+                  <Building2 className="h-8 w-8 text-blue-400" />
                 </div>
                 <div className="flex-1">
                   <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-3">
@@ -89,7 +81,7 @@ export default function BondDetailPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" />
-                      <span>{bond.type} Energy Project</span>
+                      <span>{bond.type} Sector</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-400" />
@@ -246,9 +238,9 @@ export default function BondDetailPage() {
                     <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-1">
                       Project Type
                     </div>
-                    <div className="text-base font-semibold text-white">{bond.type} Energy Project</div>
+                    <div className="text-base font-semibold text-white">{bond.type} Investment</div>
                     <div className="text-xs text-zinc-500 mt-1">
-                      Renewable {bond.type === "Wind" ? "wind" : "solar"} energy generation facility
+                      {bond.sector} sector investment opportunity
                     </div>
                   </div>
                 </div>

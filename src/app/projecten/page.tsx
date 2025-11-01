@@ -20,7 +20,7 @@ export default function ProjectenPage() {
 
   const filtered = useMemo(() => {
     return projects.filter((p) => {
-      if (type !== "all" && p.type.toLowerCase() !== type) return false;
+      if (type !== "all" && p.type !== type) return false;
       if (status !== "all" && p.status !== status) return false;
       if (location !== "all" && p.location !== location) return false;
       return true;
@@ -60,8 +60,12 @@ export default function ProjectenPage() {
           <Select
             options={[
               { label: "All types", value: "all" },
-              { label: "Wind", value: "wind" },
-              { label: "Solar", value: "solar" },
+              { label: "Technology", value: "Technology" },
+              { label: "Healthcare", value: "Healthcare" },
+              { label: "Manufacturing", value: "Manufacturing" },
+              { label: "Financial Services", value: "Financial Services" },
+              { label: "Energy", value: "Energy" },
+              { label: "Real Estate", value: "Real Estate" },
             ]}
             defaultValue="all"
             onValueChange={setType}

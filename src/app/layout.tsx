@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TrustLedger – Duurzame investeringen",
-  description: "Investeer in wind- en zonneprojecten met transparant rendement.",
+  title: "TrustLedger – Investment Platform",
+  description: "Invest in companies with transparent returns and build your portfolio.",
 };
 
 export default function RootLayout({

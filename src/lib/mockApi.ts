@@ -43,7 +43,7 @@ export async function getInvestments(): Promise<MockInvestment[]> {
   await mockDelay();
   return [
     {
-      issuance: "Windpark Noordoostpolder",
+      issuance: "Tech Innovation Fund",
       date: new Date().toISOString(),
       amount: 2500,
       bonds: 25,
@@ -51,7 +51,7 @@ export async function getInvestments(): Promise<MockInvestment[]> {
       documentUrl: "/docs/sample.pdf",
     },
     {
-      issuance: "Zonnepark Zeeland",
+      issuance: "Healthcare Expansion Bond",
       date: new Date(Date.now() - 86400000 * 7).toISOString(),
       amount: 1000,
       bonds: 10,

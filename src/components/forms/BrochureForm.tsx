@@ -32,10 +32,14 @@ export function BrochureForm() {
         <Select
           id="interest"
           name="interest"
-          defaultValue="wind"
+          defaultValue="Technology"
           options={[
-            { label: "Wind", value: "wind" },
-            { label: "Solar", value: "solar" },
+            { label: "Technology", value: "Technology" },
+            { label: "Healthcare", value: "Healthcare" },
+            { label: "Manufacturing", value: "Manufacturing" },
+            { label: "Financial Services", value: "Financial Services" },
+            { label: "Energy", value: "Energy" },
+            { label: "Real Estate", value: "Real Estate" },
           ]}
         />
       </div>

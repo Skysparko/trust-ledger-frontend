@@ -5,23 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const dummyAssets = [
   {
     id: 1,
-    name: "Solar Energy Block #2024-001",
-    type: "Energy Token",
+    name: "Tech Innovation Fund #2024-001",
+    type: "Technology Bond",
     quantity: 150,
     value: 22500,
     dateAcquired: "2024-01-15"
   },
   {
     id: 2,
-    name: "Wind Energy Block #2024-003",
-    type: "Energy Token",
+    name: "Healthcare Expansion #2024-003",
+    type: "Healthcare Bond",
     quantity: 85,
     value: 12750,
     dateAcquired: "2024-02-20"
   },
   {
     id: 3,
-    name: "Green Bond #GB-2024-045",
+    name: "Corporate Bond #GB-2024-045",
     type: "Bond",
     quantity: 50,
     value: 50000,
@@ -29,8 +29,8 @@ const dummyAssets = [
   },
   {
     id: 4,
-    name: "Hydro Energy Block #2024-007",
-    type: "Energy Token",
+    name: "Energy Portfolio #2024-007",
+    type: "Energy Bond",
     quantity: 200,
     value: 30000,
     dateAcquired: "2024-04-05"

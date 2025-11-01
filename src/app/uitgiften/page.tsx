@@ -21,7 +21,7 @@ export default function UitgiftenPage() {
 
   const filtered = useMemo(() => {
     return issuances.filter((i) => {
-      if (type !== "all" && i.type.toLowerCase() !== type) return false;
+      if (type !== "all" && i.type !== type) return false;
       if (location !== "all" && i.location !== location) return false;
       if (minRate && i.rate < Number(minRate)) return false;
       return true;
@@ -61,8 +61,12 @@ export default function UitgiftenPage() {
           <Select
             options={[
               { label: "All types", value: "all" },
-              { label: "Wind", value: "wind" },
-              { label: "Solar", value: "solar" },
+              { label: "Technology", value: "Technology" },
+              { label: "Healthcare", value: "Healthcare" },
+              { label: "Manufacturing", value: "Manufacturing" },
+              { label: "Financial Services", value: "Financial Services" },
+              { label: "Energy", value: "Energy" },
+              { label: "Real Estate", value: "Real Estate" },
             ]}
             defaultValue="all"
             onValueChange={setType}

@@ -75,7 +75,7 @@ export default function SignupPage() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="mt-4 text-lg text-zinc-600 dark:text-zinc-400 sm:text-xl"
             >
-              Start investing in sustainable energy projects
+              Start investing in companies across various sectors
             </motion.p>
           </div>
           <Card className="border-2 border-zinc-200/50 bg-white/90 backdrop-blur-xl shadow-2xl shadow-blue-500/10 transition-all duration-300 hover:shadow-blue-500/20 dark:border-zinc-700/50 dark:bg-zinc-900/90">

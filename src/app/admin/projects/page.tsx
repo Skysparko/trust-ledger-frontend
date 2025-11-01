@@ -228,10 +228,14 @@ export default function AdminProjectsPage() {
                   id="type"
                   value={formData.type || ""}
                   options={[
-                    { label: "Wind", value: "Wind" },
-                    { label: "Solar", value: "Solar" },
+                    { label: "Technology", value: "Technology" },
+                    { label: "Healthcare", value: "Healthcare" },
+                    { label: "Manufacturing", value: "Manufacturing" },
+                    { label: "Financial Services", value: "Financial Services" },
+                    { label: "Energy", value: "Energy" },
+                    { label: "Real Estate", value: "Real Estate" },
                   ]}
-                  onValueChange={(value) => setFormData({ ...formData, type: value as "Wind" | "Solar" })}
+                  onValueChange={(value) => setFormData({ ...formData, type: value })}
                 />
               </div>
             </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Building2 } from "lucide-react";
 import type { Issuance } from "@/data/issuances";
 
 export function IssuanceCard({ issuance }: { issuance: Issuance }) {
@@ -17,9 +18,15 @@ export function IssuanceCard({ issuance }: { issuance: Issuance }) {
         />
         <CardHeader>
           <div className="relative flex items-center justify-between">
-            <div>
+            <div className="flex-1">
+              <div className="mb-2 flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                <span className="text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                  {issuance.type}
+                </span>
+              </div>
               <h3 className="text-lg font-bold sm:text-xl">{issuance.title}</h3>
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{issuance.type} • {issuance.location}</p>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{issuance.location}</p>
             </div>
             <motion.div 
               className="rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 px-3 py-1.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30"
@@ -46,7 +53,7 @@ export function IssuanceCard({ issuance }: { issuance: Issuance }) {
             </div>
           </div>
           <Button asChild className="w-full shadow-lg shadow-blue-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30">
-            <Link href={`/uitgiften/${issuance.id}`}>View details</Link>
+            <Link href={`/portal/issues/${issuance.id}`}>View details</Link>
           </Button>
         </CardContent>
       </Card>

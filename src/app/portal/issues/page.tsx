@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { issuances } from "@/data/issuances";
-import { Wind, Sun } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function IssuesPage() {
@@ -16,7 +16,7 @@ export default function IssuesPage() {
           Investment Opportunities
         </h1>
         <p className="text-lg text-zinc-400 font-light">
-          Explore available bond offerings and renewable energy investments
+          Explore available bond offerings and investment opportunities
         </p>
       </div>
 
@@ -34,11 +34,7 @@ export default function IssuesPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="mb-2 flex items-center gap-2">
-                        {issuance.type === "Wind" ? (
-                          <Wind className="h-5 w-5 text-blue-400" />
-                        ) : (
-                          <Sun className="h-5 w-5 text-amber-400" />
-                        )}
+                        <Building2 className="h-5 w-5 text-blue-400" />
                         <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">
                           {issuance.type}
                         </span>
