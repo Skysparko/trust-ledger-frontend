@@ -7,6 +7,7 @@ export type AuthUser = {
   type: "individual" | "business";
   email: string;
   name: string;
+  emailVerified?: boolean;
 };
 
 type AuthState = {
@@ -31,6 +32,14 @@ const authSlice = createSlice({
         localStorage.setItem("auth_user", JSON.stringify(action.payload));
       }
     },
+    setEmailVerified(state) {
+      if (state.user) {
+        state.user.emailVerified = true;
+        if (typeof document !== "undefined") {
+          localStorage.setItem("auth_user", JSON.stringify(state.user));
+        }
+      }
+    },
     logout(state) {
       state.isAuthenticated = false;
       state.user = null;
@@ -52,7 +61,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginSuccess, logout, hydrateFromStorage } = authSlice.actions;
+export const { loginSuccess, logout, hydrateFromStorage, setEmailVerified } = authSlice.actions;
 export default authSlice.reducer;
 
 

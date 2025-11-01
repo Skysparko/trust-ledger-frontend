@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail } from "lucide-react";
 
-function VerifyContent() {
+function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
@@ -45,6 +45,8 @@ function VerifyContent() {
           setError(err.message || "Failed to verify email. Please try again.");
           setVerifying(false);
         });
+    } else {
+      setError("No verification token provided. Please check your email link.");
     }
   }, [searchParams, dispatch]);
 
@@ -112,47 +114,87 @@ function VerifyContent() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                  className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20"
+                  className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${
+                    verified
+                      ? "bg-green-100 dark:bg-green-900/20"
+                      : error
+                      ? "bg-red-100 dark:bg-red-900/20"
+                      : "bg-blue-100 dark:bg-blue-900/20"
+                  }`}
                 >
-                  <svg
-                    className="h-8 w-8 text-blue-600 dark:text-blue-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
+                  {verified ? (
+                    <svg
+                      className="h-8 w-8 text-green-600 dark:text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  ) : error ? (
+                    <svg
+                      className="h-8 w-8 text-red-600 dark:text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="h-8 w-8 text-blue-600 dark:text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  )}
                 </motion.div>
                 <h1 className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl">
-                  {verified ? "Email verified!" : verifying ? "Verifying..." : "Verify your email"}
+                  {verified ? "Email verified!" : verifying ? "Verifying email..." : error ? "Verification failed" : "Verifying email"}
                 </h1>
                 <p className="text-lg text-zinc-600 dark:text-zinc-400">
                   {verified
                     ? "Your email has been successfully verified. You can now log in to your account."
                     : verifying
-                    ? "Please wait while we verify your email..."
-                    : "We sent a verification link to your email. Click the link to activate your account."}
+                    ? "Please wait while we verify your email address..."
+                    : error
+                    ? error
+                    : "Processing your verification request..."}
                 </p>
               </div>
-              {error && (
-                <motion.p
+              {error && !verifying && (
+                <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 text-sm text-red-600 dark:text-red-400"
+                  className="mb-6 rounded-lg bg-red-50 p-4 dark:bg-red-900/10"
                 >
-                  {error}
-                </motion.p>
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
+                </motion.div>
               )}
               {resendSuccess && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 rounded-lg bg-green-50 p-4 dark:bg-green-900/10"
+                  className="mb-6 rounded-lg bg-green-50 p-4 dark:bg-green-900/10"
                 >
                   <p className="text-sm text-green-600 dark:text-green-400">
                     Verification email sent! Please check your inbox.
@@ -224,11 +266,11 @@ function VerifyContent() {
                     Continue to dashboard
                   </Button>
                 )}
-                {!verified && !verifying && !showResendForm && (
+                {error && !showResendForm && !verified && (
                   <Button
                     onClick={() => setShowResendForm(true)}
                     variant="outline"
-                    className="flex items-center gap-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                    className="flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30"
                   >
                     <Mail className="h-4 w-4" />
                     Resend verification email
@@ -243,7 +285,7 @@ function VerifyContent() {
   );
 }
 
-export default function VerifyPage() {
+export default function VerifyEmailPage() {
   return (
     <Suspense
       fallback={
@@ -252,7 +294,8 @@ export default function VerifyPage() {
         </div>
       }
     >
-      <VerifyContent />
+      <VerifyEmailContent />
     </Suspense>
   );
 }
+

@@ -6,6 +6,7 @@ export type AuthUser = {
   email: string;
   name: string;
   token?: string;
+  emailVerified?: boolean;
 };
 
 export type LoginPayload = {
@@ -24,10 +25,22 @@ export type ResetPasswordPayload = {
   email: string;
 };
 
+export type ResetPasswordConfirmPayload = {
+  token: string;
+  newPassword: string;
+};
+
 export type ChangePasswordPayload = {
   currentPassword: string;
   newPassword: string;
-  confirmPassword: string;
+};
+
+export type VerifyEmailPayload = {
+  token: string;
+};
+
+export type ResendVerificationPayload = {
+  email: string;
 };
 
 /**
@@ -66,22 +79,36 @@ export class AuthApi extends BaseApi {
   /**
    * Verify email
    */
-  static async verifyEmail(token: string): Promise<void> {
-    return this.post<void>("/auth/verify", { token });
+  static async verifyEmail(payload: VerifyEmailPayload): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>("/auth/verify-email", payload);
+  }
+
+  /**
+   * Resend verification email
+   */
+  static async resendVerification(payload: ResendVerificationPayload): Promise<{ message: string }> {
+    return this.post<{ message: string }>("/auth/resend-verification", payload);
   }
 
   /**
    * Request password reset
    */
-  static async requestPasswordReset(payload: ResetPasswordPayload): Promise<void> {
-    return this.post<void>("/auth/reset-password", payload);
+  static async requestPasswordReset(payload: ResetPasswordPayload): Promise<{ message: string }> {
+    return this.post<{ message: string }>("/auth/reset-password", payload);
   }
 
   /**
-   * Change password
+   * Confirm password reset
    */
-  static async changePassword(payload: ChangePasswordPayload): Promise<void> {
-    return this.post<void>("/auth/change-password", payload);
+  static async confirmPasswordReset(payload: ResetPasswordConfirmPayload): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>("/auth/reset-password-confirm", payload);
+  }
+
+  /**
+   * Change password (authenticated)
+   */
+  static async changePassword(payload: ChangePasswordPayload): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>("/auth/change-password", payload);
   }
 
   /**

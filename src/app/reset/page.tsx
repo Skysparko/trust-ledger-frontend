@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AuthApi } from "@/api/auth.api";
 import { fadeUp } from "@/lib/motion";
 import { KeyRound } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
 
 const validationSchema = Yup.object({
   email: Yup.string()
@@ -25,15 +28,28 @@ export default function ResetPage() {
       email: "",
     },
     validationSchema,
-    onSubmit: async (values, { setSubmitting }) => {
-      // Placeholder for API call
-      setSent(true);
-      setSubmitting(false);
+    onSubmit: async (values, { setSubmitting, setStatus }) => {
+      try {
+        await AuthApi.requestPasswordReset({ email: values.email });
+        setSent(true);
+      } catch (err: any) {
+        setStatus(err.message || "Failed to request password reset. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
     },
   });
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+      <div className="absolute top-0 left-0 right-0 z-10 px-4 py-4">
+        <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-80">
+          <Image src="/globe.svg" alt="Logo" width={32} height={32} />
+          <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
+            TrustLedger
+          </span>
+        </Link>
+      </div>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -130,6 +146,15 @@ export default function ResetPage() {
                 >
                   {formik.isSubmitting ? "Sending..." : "Send reset link"}
                 </Button>
+                {formik.status && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-red-600 dark:text-red-400"
+                  >
+                    {formik.status}
+                  </motion.p>
+                )}
                 {sent && (
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}

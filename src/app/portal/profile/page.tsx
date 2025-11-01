@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { hydrateFromStorage } from "@/store/slices/auth";
 import { hydrateFromAuth, setKycDocument, setProfile } from "@/store/slices/profile";
+import { AuthApi } from "@/api/auth.api";
 import { Lock, KeyRound, ShieldCheck, Wallet, Eye, EyeOff, Copy, Check } from "lucide-react";
 
 const profileValidationSchema = Yup.object({
@@ -101,14 +102,20 @@ export default function ProfilePage() {
       confirmPassword: "",
     },
     validationSchema: passwordValidationSchema,
-    onSubmit: async (values, { setSubmitting, resetForm }) => {
-      setSubmitting(true);
-      setTimeout(() => {
-        // Placeholder for password change API call
+    onSubmit: async (values, { setSubmitting, resetForm, setStatus }) => {
+      try {
+        await AuthApi.changePassword({
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword,
+        });
         resetForm();
+        setStatus("Password changed successfully");
+        setTimeout(() => setStatus(undefined), 3000);
+      } catch (err: any) {
+        setStatus(err.message || "Failed to change password. Please try again.");
+      } finally {
         setSubmitting(false);
-        alert("Password changed successfully");
-      }, 1000);
+      }
     },
   });
 

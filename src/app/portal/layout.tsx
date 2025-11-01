@@ -16,6 +16,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const router = useRouter();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const notifications = useAppSelector((s) => s.notifications.items);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -24,6 +25,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     dispatch(hydrateFromStorage());
   }, [dispatch]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.push("/login");
+      return;
+    }
+  }, [isAuthenticated, user, router]);
 
   useEffect(() => {
     if (userMenuOpen) {
@@ -55,6 +64,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     dispatch(logout());
     router.push("/");
     setUserMenuOpen(false);
+  }
+
+  // Show loading if user is not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
   }
 
   return (

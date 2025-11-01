@@ -5,6 +5,7 @@ export type AdminUser = {
   email: string;
   name: string;
   role: "admin" | "super_admin";
+  token?: string;
 };
 
 export type AdminStats = {
@@ -71,7 +72,7 @@ export class AdminApi extends BaseApi {
    * Admin login
    */
   static async login(payload: AdminLoginPayload): Promise<AdminUser> {
-    return this.post<AdminUser>("/admin/auth/login", payload);
+    return this.post<AdminUser>("/admin/login", payload);
   }
 
   /**

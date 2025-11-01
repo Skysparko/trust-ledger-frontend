@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +16,32 @@ import { CheckCircle2, XCircle, FileText, UserCheck, Shield, ArrowRight } from "
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const investments = useAppSelector((s) => s.investments.items);
   const user = useAppSelector((s) => s.auth.user);
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const profile = useAppSelector((s) => s.profile);
 
   useEffect(() => {
     dispatch(hydrateFromStorage());
   }, [dispatch]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.push("/login");
+      return;
+    }
+  }, [isAuthenticated, user, router]);
+
+  // Don't render if not authenticated (redirect is happening)
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (user) {

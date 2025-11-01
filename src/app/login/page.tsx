@@ -11,16 +11,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { hydrateFromStorage, loginSuccess } from "@/store/slices/auth";
-import { login as apiLogin } from "@/lib/mockApi";
+import { AuthApi } from "@/api/auth.api";
 import { fadeUp } from "@/lib/motion";
 import { LogIn } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
 
 const validationSchema = Yup.object({
   email: Yup.string()
     .email("Invalid email address")
     .required("Email is required"),
   password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
+    .min(8, "Password must be at least 8 characters")
     .required("Password is required"),
 });
 
@@ -45,11 +47,14 @@ export default function LoginPage() {
     validationSchema,
     onSubmit: async (values, { setSubmitting, setStatus }) => {
       try {
-        const user = await apiLogin(values.email, values.password);
+        const user = await AuthApi.login({
+          email: values.email,
+          password: values.password,
+        });
         dispatch(loginSuccess(user));
         router.push("/portal/dashboard");
-      } catch (err) {
-        setStatus("Login failed. Try again.");
+      } catch (err: any) {
+        setStatus(err.message || "Login failed. Try again.");
       } finally {
         setSubmitting(false);
       }
@@ -58,6 +63,14 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+      <div className="absolute top-0 left-0 right-0 z-10 px-4 py-4">
+        <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-80">
+          <Image src="/globe.svg" alt="Logo" width={32} height={32} />
+          <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
+            TrustLedger
+          </span>
+        </Link>
+      </div>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

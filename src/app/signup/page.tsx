@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { signup as apiSignup } from "@/lib/mockApi";
-import { useAppDispatch } from "@/store";
-import { loginSuccess } from "@/store/slices/auth";
+import { AuthApi } from "@/api/auth.api";
 import { fadeUp } from "@/lib/motion";
 import { User, Building2 } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
 
 const validationSchema = Yup.object({
   type: Yup.string()
@@ -35,7 +35,6 @@ const validationSchema = Yup.object({
 
 export default function SignupPage() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
 
   const formik = useFormik({
     initialValues: {
@@ -47,8 +46,13 @@ export default function SignupPage() {
     validationSchema,
     onSubmit: async (values, { setSubmitting, setStatus }) => {
       try {
-        const user = await apiSignup({ type: values.type, name: values.name, email: values.email, password: values.password });
-        dispatch(loginSuccess(user));
+        await AuthApi.signup({
+          type: values.type,
+          name: values.name,
+          email: values.email,
+          password: values.password,
+        });
+        // Redirect to verify page without logging in
         router.push("/verify");
       } catch (err: any) {
         setStatus(err.message || "Signup failed. Please try again.");
@@ -59,6 +63,14 @@ export default function SignupPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+      <div className="absolute top-0 left-0 right-0 z-10 px-4 py-4">
+        <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-80">
+          <Image src="/globe.svg" alt="Logo" width={32} height={32} />
+          <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
+            TrustLedger
+          </span>
+        </Link>
+      </div>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
