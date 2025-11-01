@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { closeSubscription } from "@/store/slices/ui";
 import { Button } from "@/components/ui/button";
@@ -15,9 +17,20 @@ const paymentMethodOptions = [
   { label: "Bank transfer", value: "bank_transfer" },
 ];
 
+const validationSchema = Yup.object({
+  issuance: Yup.string()
+    .required("Please select an investment opportunity"),
+  bonds: Yup.number()
+    .min(1, "Number of bonds must be at least 1")
+    .required("Number of bonds is required"),
+  method: Yup.string()
+    .required("Payment method is required"),
+});
+
 export function SubscriptionModal() {
   const { subscriptionOpen, subscriptionDefaults } = useAppSelector((s) => s.ui);
   const dispatch = useAppDispatch();
+  const [confirm, setConfirm] = useState(false);
   
   // Generate issuance options from actual data
   const issuanceOptions = issuances
@@ -27,15 +40,33 @@ export function SubscriptionModal() {
       value: iss.title,
     }));
 
-  const [issuance, setIssuance] = useState(subscriptionDefaults?.issuance || issuanceOptions[0]?.value || "");
-  const [bonds, setBonds] = useState<number>(10);
-  const [method, setMethod] = useState("bank_transfer");
-  const [confirm, setConfirm] = useState(false);
+  const formik = useFormik({
+    initialValues: {
+      issuance: subscriptionDefaults?.issuance || issuanceOptions[0]?.value || "",
+      bonds: 10,
+      method: "bank_transfer",
+    },
+    validationSchema,
+    enableReinitialize: true,
+    onSubmit: async (values, { setSubmitting }) => {
+      dispatch(
+        addInvestment({
+          issuance: values.issuance,
+          date: new Date().toISOString(),
+          amount: values.bonds * 100,
+          bonds: values.bonds,
+          status: "pending",
+        })
+      );
+      setConfirm(true);
+      setSubmitting(false);
+    },
+  });
 
   // Update issuance when defaults change
   useEffect(() => {
     if (subscriptionDefaults?.issuance) {
-      setIssuance(subscriptionDefaults.issuance);
+      formik.setFieldValue("issuance", subscriptionDefaults.issuance);
     }
   }, [subscriptionDefaults]);
 
@@ -43,24 +74,12 @@ export function SubscriptionModal() {
   useEffect(() => {
     if (!subscriptionOpen) {
       setConfirm(false);
-      setBonds(10);
+      formik.resetForm();
+      formik.setFieldValue("bonds", 10);
     }
   }, [subscriptionOpen]);
 
   if (!subscriptionOpen) return null;
-
-  function submit() {
-    dispatch(
-      addInvestment({
-        issuance,
-        date: new Date().toISOString(),
-        amount: bonds * 100,
-        bonds,
-        status: "pending",
-      })
-    );
-    setConfirm(true);
-  }
 
   return (
     <div 
@@ -77,18 +96,24 @@ export function SubscriptionModal() {
               <h3 className="text-2xl font-bold text-white mb-2">New Investment</h3>
               <p className="text-sm text-zinc-400">Complete the form below to invest in this opportunity</p>
             </div>
-            <div className="space-y-5">
+            <form onSubmit={formik.handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label className="text-zinc-300">Investment Opportunity</Label>
                 {issuanceOptions.length > 0 ? (
-                  <Select 
-                    options={issuanceOptions} 
-                    value={issuance} 
-                    onValueChange={setIssuance}
-                  />
+                  <>
+                    <Select 
+                      options={issuanceOptions} 
+                      value={formik.values.issuance} 
+                      onValueChange={(value) => formik.setFieldValue("issuance", value)}
+                      className={formik.touched.issuance && formik.errors.issuance ? "border-red-500" : ""}
+                    />
+                    {formik.touched.issuance && formik.errors.issuance && (
+                      <p className="text-xs text-red-400">{formik.errors.issuance}</p>
+                    )}
+                  </>
                 ) : (
                   <Input 
-                    value={issuance} 
+                    value={formik.values.issuance} 
                     disabled
                     className="bg-zinc-800/50 border-zinc-700 text-white"
                   />
@@ -97,23 +122,36 @@ export function SubscriptionModal() {
               <div className="space-y-2">
                 <Label className="text-zinc-300">Number of Bonds</Label>
                 <Input 
+                  id="bonds"
+                  name="bonds"
                   type="number" 
                   min={1} 
-                  value={bonds} 
-                  onChange={(e) => setBonds(parseInt(e.target.value || "0", 10))}
-                  className="bg-zinc-800/50 border-zinc-700 text-white"
+                  value={formik.values.bonds} 
+                  onChange={(e) => formik.setFieldValue("bonds", parseInt(e.target.value || "0", 10))}
+                  onBlur={formik.handleBlur}
+                  className={`bg-zinc-800/50 border-zinc-700 text-white ${
+                    formik.touched.bonds && formik.errors.bonds ? "border-red-500" : ""
+                  }`}
                 />
+                {formik.touched.bonds && formik.errors.bonds && (
+                  <p className="text-xs text-red-400">{formik.errors.bonds}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-zinc-300">Payment Method</Label>
                 <Select 
                   options={paymentMethodOptions} 
-                  value={method} 
-                  onValueChange={setMethod}
+                  value={formik.values.method} 
+                  onValueChange={(value) => formik.setFieldValue("method", value)}
+                  className={formik.touched.method && formik.errors.method ? "border-red-500" : ""}
                 />
+                {formik.touched.method && formik.errors.method && (
+                  <p className="text-xs text-red-400">{formik.errors.method}</p>
+                )}
               </div>
               <div className="pt-4 border-t border-zinc-800/50 flex justify-end gap-3">
                 <Button 
+                  type="button"
                   variant="outline" 
                   onClick={() => dispatch(closeSubscription())}
                   className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
@@ -121,14 +159,14 @@ export function SubscriptionModal() {
                   Cancel
                 </Button>
                 <Button 
-                  onClick={submit}
+                  type="submit"
                   className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-500/20"
-                  disabled={!issuance || bonds < 1}
+                  disabled={formik.isSubmitting || !formik.isValid}
                 >
-                  Submit Investment
+                  {formik.isSubmitting ? "Submitting..." : "Submit Investment"}
                 </Button>
               </div>
-            </div>
+            </form>
           </>
         ) : (
           <div className="text-center py-4">

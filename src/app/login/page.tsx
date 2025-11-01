@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,11 +15,16 @@ import { login as apiLogin } from "@/lib/mockApi";
 import { fadeUp } from "@/lib/motion";
 import { LogIn } from "lucide-react";
 
+const validationSchema = Yup.object({
+  email: Yup.string()
+    .email("Invalid email address")
+    .required("Email is required"),
+  password: Yup.string()
+    .min(6, "Password must be at least 6 characters")
+    .required("Password is required"),
+});
+
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
@@ -30,20 +37,24 @@ export default function LoginPage() {
     if (isAuthenticated) router.push("/portal/dashboard");
   }, [isAuthenticated, router]);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const user = await apiLogin(email, password);
-      dispatch(loginSuccess(user));
-      router.push("/portal/dashboard");
-    } catch (err) {
-      setError("Login failed. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+    validationSchema,
+    onSubmit: async (values, { setSubmitting, setStatus }) => {
+      try {
+        const user = await apiLogin(values.email, values.password);
+        dispatch(loginSuccess(user));
+        router.push("/portal/dashboard");
+      } catch (err) {
+        setStatus("Login failed. Try again.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
@@ -113,22 +124,58 @@ export default function LoginPage() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <form onSubmit={onSubmit} className="space-y-5">
+              <form onSubmit={formik.handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input
+                    id="email"
+                    type="email"
+                    name="email"
+                    placeholder="you@example.com"
+                    value={formik.values.email}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={formik.touched.email && formik.errors.email ? "border-red-500" : ""}
+                  />
+                  {formik.touched.email && formik.errors.email && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-red-600 dark:text-red-400"
+                    >
+                      {formik.errors.email}
+                    </motion.p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <Input
+                    id="password"
+                    type="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={formik.touched.password && formik.errors.password ? "border-red-500" : ""}
+                  />
+                  {formik.touched.password && formik.errors.password && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-red-600 dark:text-red-400"
+                    >
+                      {formik.errors.password}
+                    </motion.p>
+                  )}
                 </div>
-                {error && (
+                {formik.status && (
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="text-sm text-red-600 dark:text-red-400"
                   >
-                    {error}
+                    {formik.status}
                   </motion.p>
                 )}
                 <div className="flex items-center justify-between text-sm">
@@ -139,8 +186,8 @@ export default function LoginPage() {
                     Create account
                   </a>
                 </div>
-                <Button type="submit" disabled={loading} className="w-full shadow-lg shadow-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30">
-                  {loading ? "Signing in..." : "Sign in"}
+                <Button type="submit" disabled={formik.isSubmitting} className="w-full shadow-lg shadow-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30">
+                  {formik.isSubmitting ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
             </CardContent>

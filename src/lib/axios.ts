@@ -1,13 +1,21 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
 // Get base URL from environment variable or default to API endpoint
+// Next.js environment variables are loaded at build time, so we read from process.env
 const getBaseURL = (): string => {
-  if (typeof window !== "undefined") {
-    // Client-side: use environment variable or relative path
-    return process.env.NEXT_PUBLIC_API_URL || "/api";
+  // Priority: API_URL (server-side) > NEXT_PUBLIC_API_URL (both) > default
+  const baseURL = 
+    process.env.API_URL || 
+    process.env.NEXT_PUBLIC_API_URL || 
+    "http://localhost:8000/api";
+  
+  // Debug log in development
+  if (process.env.NODE_ENV === "development") {
+    console.log("[Axios] Base URL configured:", baseURL);
+    console.log("[Axios] NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL);
   }
-  // Server-side: use full URL from environment
-  return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+  
+  return baseURL;
 };
 
 // Create axios instance with default config

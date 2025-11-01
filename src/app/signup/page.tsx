@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,22 +14,48 @@ import { loginSuccess } from "@/store/slices/auth";
 import { fadeUp } from "@/lib/motion";
 import { User, Building2 } from "lucide-react";
 
+const validationSchema = Yup.object({
+  type: Yup.string()
+    .oneOf(["individual", "business"], "Please select an account type")
+    .required("Account type is required"),
+  name: Yup.string()
+    .min(2, "Name must be at least 2 characters")
+    .required("Name is required"),
+  email: Yup.string()
+    .email("Invalid email address")
+    .required("Email is required"),
+  password: Yup.string()
+    .min(8, "Password must be at least 8 characters")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    )
+    .required("Password is required"),
+});
+
 export default function SignupPage() {
-  const [type, setType] = useState<"individual" | "business">("individual");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    const user = await apiSignup({ type, name, email, password });
-    dispatch(loginSuccess(user));
-    router.push("/verify");
-  }
+  const formik = useFormik({
+    initialValues: {
+      type: "individual" as "individual" | "business",
+      name: "",
+      email: "",
+      password: "",
+    },
+    validationSchema,
+    onSubmit: async (values, { setSubmitting, setStatus }) => {
+      try {
+        const user = await apiSignup({ type: values.type, name: values.name, email: values.email, password: values.password });
+        dispatch(loginSuccess(user));
+        router.push("/verify");
+      } catch (err: any) {
+        setStatus(err.message || "Signup failed. Please try again.");
+        setSubmitting(false);
+      }
+    },
+  });
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
@@ -102,17 +129,17 @@ export default function SignupPage() {
                   <motion.div
                     className="absolute top-1.5 bottom-1.5 w-[calc(50%-0.75rem)] rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/30"
                     animate={{
-                      left: type === "individual" ? "0.75rem" : "calc(50% + 0.75rem)",
+                      left: formik.values.type === "individual" ? "0.75rem" : "calc(50% + 0.75rem)",
                     }}
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                   <motion.button
                     type="button"
-                    onClick={() => setType("individual")}
+                    onClick={() => formik.setFieldValue("type", "individual")}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`group relative z-10 flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-colors duration-300 ${
-                      type === "individual"
+                      formik.values.type === "individual"
                         ? "text-white"
                         : "text-zinc-700 dark:text-zinc-300"
                     }`}
@@ -122,11 +149,11 @@ export default function SignupPage() {
                   </motion.button>
                   <motion.button
                     type="button"
-                    onClick={() => setType("business")}
+                    onClick={() => formik.setFieldValue("type", "business")}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`group relative z-10 flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-colors duration-300 ${
-                      type === "business"
+                      formik.values.type === "business"
                         ? "text-white"
                         : "text-zinc-700 dark:text-zinc-300"
                     }`}
@@ -135,28 +162,99 @@ export default function SignupPage() {
                     Business
                   </motion.button>
                 </div>
+                {formik.touched.type && formik.errors.type && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-red-600 dark:text-red-400"
+                  >
+                    {formik.errors.type}
+                  </motion.p>
+                )}
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <form onSubmit={onSubmit} className="space-y-5">
+              <form onSubmit={formik.handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="John Doe"
+                    value={formik.values.name}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={formik.touched.name && formik.errors.name ? "border-red-500" : ""}
+                  />
+                  {formik.touched.name && formik.errors.name && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-red-600 dark:text-red-400"
+                    >
+                      {formik.errors.name}
+                    </motion.p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input
+                    id="email"
+                    type="email"
+                    name="email"
+                    placeholder="you@example.com"
+                    value={formik.values.email}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={formik.touched.email && formik.errors.email ? "border-red-500" : ""}
+                  />
+                  {formik.touched.email && formik.errors.email && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-red-600 dark:text-red-400"
+                    >
+                      {formik.errors.email}
+                    </motion.p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <Input
+                    id="password"
+                    type="password"
+                    name="password"
+                    placeholder="Create a password"
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={formik.touched.password && formik.errors.password ? "border-red-500" : ""}
+                  />
+                  {formik.touched.password && formik.errors.password && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-red-600 dark:text-red-400"
+                    >
+                      {formik.errors.password}
+                    </motion.p>
+                  )}
                 </div>
+                {formik.status && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-red-600 dark:text-red-400"
+                  >
+                    {formik.status}
+                  </motion.p>
+                )}
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={formik.isSubmitting}
                   className="w-full shadow-lg shadow-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30"
                 >
-                  {loading ? "Creating..." : "Create account"}
+                  {formik.isSubmitting ? "Creating..." : "Create account"}
                 </Button>
                 <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
                   Already have an account?{" "}

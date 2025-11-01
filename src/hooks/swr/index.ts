@@ -5,4 +5,5 @@ export * from "./useIssuances";
 export * from "./useProjects";
 export * from "./useProfile";
 export * from "./useAdmin";
+export * from "./usePublic";
 

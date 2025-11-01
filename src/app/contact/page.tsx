@@ -2,21 +2,35 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BrochureForm } from "@/components/forms/BrochureForm";
 import { SectionHeader } from "@/components/sections/SectionHeader";
 
+const validationSchema = Yup.object({
+  email: Yup.string()
+    .email("Invalid email address")
+    .required("Email is required"),
+});
+
 export default function ContactPage() {
-  const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  function onSubscribe(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitted(true);
-    setEmail("");
-  }
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+    },
+    validationSchema,
+    onSubmit: async (values, { setSubmitting, resetForm }) => {
+      // Placeholder for API call
+      setSubmitted(true);
+      resetForm();
+      setSubmitting(false);
+    },
+  });
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
@@ -54,18 +68,41 @@ export default function ContactPage() {
             <p className="mt-2 text-base text-zinc-600 dark:text-zinc-400">Get updates on new issuances and projects.</p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={onSubscribe} className="flex gap-2">
-              <Input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="text-base"
-              />
-              <Button type="submit">Subscribe</Button>
+            <form onSubmit={formik.handleSubmit} className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={formik.values.email}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`text-base ${formik.touched.email && formik.errors.email ? "border-red-500" : ""}`}
+                />
+                <Button type="submit" disabled={formik.isSubmitting}>
+                  {formik.isSubmitting ? "Subscribing..." : "Subscribe"}
+                </Button>
+              </div>
+              {formik.touched.email && formik.errors.email && (
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-sm text-red-600 dark:text-red-400"
+                >
+                  {formik.errors.email}
+                </motion.p>
+              )}
+              {submitted && (
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-base font-medium text-green-600 dark:text-green-400"
+                >
+                  Thanks for subscribing!
+                </motion.p>
+              )}
             </form>
-            {submitted && <p className="mt-2 text-base font-medium text-green-600">Thanks for subscribing!</p>}
           </CardContent>
         </Card>
         <Card>

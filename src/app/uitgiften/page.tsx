@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { issuances } from "@/data/issuances";
+import { useIssuances } from "@/hooks/swr";
 import { IssuanceCard } from "@/components/cards/IssuanceCard";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -14,19 +14,27 @@ export default function UitgiftenPage() {
   const [location, setLocation] = useState<string>("all");
   const [minRate, setMinRate] = useState<string>("");
 
+  // Build API filters
+  const apiFilters = useMemo(() => {
+    const filters: any = {};
+    if (type !== "all") filters.type = type;
+    if (location !== "all") filters.location = location;
+    return filters;
+  }, [type, location]);
+
+  const { issuances, isLoading } = useIssuances(Object.keys(apiFilters).length > 0 ? apiFilters : undefined);
+
   const uniqueLocations = useMemo(() => {
     const set = new Set(issuances.map((i) => i.location));
     return Array.from(set);
-  }, []);
+  }, [issuances]);
 
   const filtered = useMemo(() => {
     return issuances.filter((i) => {
-      if (type !== "all" && i.type !== type) return false;
-      if (location !== "all" && i.location !== location) return false;
       if (minRate && i.rate < Number(minRate)) return false;
       return true;
     });
-  }, [type, location, minRate]);
+  }, [issuances, minRate]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
@@ -83,19 +91,25 @@ export default function UitgiftenPage() {
             onChange={(e) => setMinRate(e.target.value)}
           />
         </motion.div>
-        <motion.div
-          variants={staggerContainer(0.08)}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-80px" }}
-          className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {filtered.map((i) => (
-            <motion.div key={i.id} variants={fadeUp}>
-              <IssuanceCard issuance={i} />
-            </motion.div>
-          ))}
-        </motion.div>
+        {isLoading ? (
+          <div className="text-center py-12 text-zinc-500">Loading issuances...</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12 text-zinc-500">No issuances found matching your filters.</div>
+        ) : (
+          <motion.div
+            variants={staggerContainer(0.08)}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-80px" }}
+            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {filtered.map((i) => (
+              <motion.div key={i.id} variants={fadeUp}>
+                <IssuanceCard issuance={i} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
     </div>
   );

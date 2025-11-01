@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { projects } from "@/data/projects";
+import { useProjects } from "@/hooks/swr";
 import { ProjectCard } from "@/components/cards/ProjectCard";
 import { Select } from "@/components/ui/select";
 import { motion } from "framer-motion";
@@ -13,19 +13,21 @@ export default function ProjectenPage() {
   const [status, setStatus] = useState<string>("all");
   const [location, setLocation] = useState<string>("all");
 
+  // Build API filters
+  const apiFilters = useMemo(() => {
+    const filters: any = {};
+    if (type !== "all") filters.type = type;
+    if (status !== "all") filters.status = status;
+    if (location !== "all") filters.location = location;
+    return filters;
+  }, [type, status, location]);
+
+  const { projects, isLoading } = useProjects(Object.keys(apiFilters).length > 0 ? apiFilters : undefined);
+
   const uniqueLocations = useMemo(() => {
     const set = new Set(projects.map((p) => p.location));
     return Array.from(set);
-  }, []);
-
-  const filtered = useMemo(() => {
-    return projects.filter((p) => {
-      if (type !== "all" && p.type !== type) return false;
-      if (status !== "all" && p.status !== status) return false;
-      if (location !== "all" && p.location !== location) return false;
-      return true;
-    });
-  }, [type, status, location]);
+  }, [projects]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
@@ -86,19 +88,25 @@ export default function ProjectenPage() {
             onValueChange={setLocation}
           />
         </motion.div>
-        <motion.div
-          variants={staggerContainer(0.08)}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-80px" }}
-          className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {filtered.map((p) => (
-            <motion.div key={p.id} variants={fadeUp}>
-              <ProjectCard project={p} />
-            </motion.div>
-          ))}
-        </motion.div>
+        {isLoading ? (
+          <div className="text-center py-12 text-zinc-500">Loading projects...</div>
+        ) : projects.length === 0 ? (
+          <div className="text-center py-12 text-zinc-500">No projects found matching your filters.</div>
+        ) : (
+          <motion.div
+            variants={staggerContainer(0.08)}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-80px" }}
+            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {projects.map((p) => (
+              <motion.div key={p.id} variants={fadeUp}>
+                <ProjectCard project={p} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
     </div>
   );

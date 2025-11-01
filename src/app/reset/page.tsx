@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,14 +11,26 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { fadeUp } from "@/lib/motion";
 import { KeyRound } from "lucide-react";
 
+const validationSchema = Yup.object({
+  email: Yup.string()
+    .email("Invalid email address")
+    .required("Email is required"),
+});
+
 export default function ResetPage() {
-  const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSent(true);
-  }
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+    },
+    validationSchema,
+    onSubmit: async (values, { setSubmitting }) => {
+      // Placeholder for API call
+      setSent(true);
+      setSubmitting(false);
+    },
+  });
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
@@ -86,16 +100,35 @@ export default function ResetPage() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <form onSubmit={onSubmit} className="space-y-5">
+              <form onSubmit={formik.handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input
+                    id="email"
+                    type="email"
+                    name="email"
+                    placeholder="you@example.com"
+                    value={formik.values.email}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className={formik.touched.email && formik.errors.email ? "border-red-500" : ""}
+                  />
+                  {formik.touched.email && formik.errors.email && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-red-600 dark:text-red-400"
+                    >
+                      {formik.errors.email}
+                    </motion.p>
+                  )}
                 </div>
                 <Button
                   type="submit"
+                  disabled={formik.isSubmitting}
                   className="w-full shadow-lg shadow-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30"
                 >
-                  Send reset link
+                  {formik.isSubmitting ? "Sending..." : "Send reset link"}
                 </Button>
                 {sent && (
                   <motion.p

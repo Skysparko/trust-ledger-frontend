@@ -5,6 +5,7 @@ import { IssuanceApi } from "@/api/issuance.api";
 import { ProjectApi } from "@/api/project.api";
 import { AdminApi } from "@/api/admin.api";
 import { ProfileApi } from "@/api/profile.api";
+import { PublicApi } from "@/api/public.api";
 
 /**
  * SWR Key Patterns
@@ -50,6 +51,13 @@ export const SwrKeys = {
     transactions: (filters?: any) => ["/admin/transactions", filters],
     transaction: (id: string) => `/admin/transactions/${id}`,
     documents: (filters?: any) => ["/admin/documents", filters],
+  },
+
+  // Public
+  public: {
+    posts: (filters?: any) => ["/posts", filters],
+    post: (id: string) => `/posts/${id}`,
+    webinars: () => "/webinars",
   },
 } as const;
 
@@ -129,6 +137,19 @@ export const adminFetchers = {
   }) as Fetcher<any, string | [string, any?]>,
 };
 
+// Public fetchers
+export const publicFetchers = {
+  posts: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return PublicApi.getPosts(filters);
+  }) as Fetcher<any, string | [string, any?]>,
+  post: ((key: string) => {
+    const id = key.split("/").pop() || "";
+    return PublicApi.getPost(id);
+  }) as Fetcher<any, string>,
+  webinars: (() => PublicApi.getWebinars()) as Fetcher<any>,
+};
+
 /**
  * Generic SWR fetcher
  * Automatically determines which fetcher to use based on the key
@@ -194,6 +215,18 @@ export const swrFetcher: Fetcher<any, string | [string, any?]> = async (key: str
     if (endpoint === "/admin/documents" || endpoint.startsWith("/admin/documents/")) {
       return adminFetchers.documents(endpoint, filters);
     }
+  }
+
+  // Public endpoints
+  if (endpoint === "/posts" || endpoint.startsWith("/posts/")) {
+    if (endpoint.startsWith("/posts/") && endpoint !== "/posts") {
+      return publicFetchers.post(endpoint);
+    }
+    return publicFetchers.posts(endpoint, filters);
+  }
+
+  if (endpoint === "/webinars") {
+    return publicFetchers.webinars();
   }
 
   throw new Error(`Unknown SWR key: ${endpoint}`);

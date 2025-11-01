@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import type { Project } from "@/data/projects";
+import type { Project } from "@/api/project.api";
 
 export function ProjectCard({ project }: { project: Project }) {
   return (

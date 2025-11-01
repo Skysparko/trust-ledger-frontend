@@ -4,16 +4,11 @@ This project uses environment variables for configuration. Follow these steps to
 
 ## Quick Start
 
-1. **Copy the example file:**
-   ```bash
-   cp .env.example .env.local
-   ```
+1. **Create or update the `.env` file** in the project root with your actual values:
+   - For local development, update `NEXT_PUBLIC_API_URL` with your backend API URL
+   - Example: `NEXT_PUBLIC_API_URL=http://localhost:8000/api`
 
-2. **Update `.env.local`** with your actual values:
-   - For local development, the defaults should work
-   - Update `NEXT_PUBLIC_API_URL` with your backend API URL
-
-3. **Restart your development server** after changing environment variables:
+2. **Restart your development server** after changing environment variables:
    ```bash
    npm run dev
    ```
@@ -25,7 +20,7 @@ This project uses environment variables for configuration. Follow these steps to
 #### `NEXT_PUBLIC_API_URL`
 - **Description**: Public API URL accessible on client-side
 - **Type**: String (URL)
-- **Default**: `http://localhost:3000/api`
+- **Default**: `http://localhost:8000/api`
 - **Example**: `https://api.yourdomain.com`
 - **Usage**: This is the base URL for all API calls made from the browser
 
@@ -52,10 +47,9 @@ This project uses environment variables for configuration. Follow these steps to
 
 ## File Structure
 
-- **`.env.example`** - Template file with all environment variables (committed to git)
-- **`.env.local`** - Your local development variables (git-ignored)
-- **`.env.production`** - Production environment variables (git-ignored, optional)
-- **`.env.staging`** - Staging environment variables (git-ignored, optional)
+- **`.env`** - Environment variables file (should be git-ignored for security)
+  - Contains all environment variables for your local development
+  - Do NOT commit this file to git if it contains secrets
 
 ## Next.js Environment Variable Rules
 
@@ -98,12 +92,12 @@ For production deployments:
 
 2. Ensure `NEXT_PUBLIC_API_URL` points to your production API
 
-3. Never commit `.env.local` or production secrets to git
+3. Never commit `.env` file with secrets to git
 
 ## Troubleshooting
 
 ### Variables not updating?
-- Restart your development server after changing `.env.local`
+- Restart your development server after changing `.env` file
 - Ensure variable names are correct (case-sensitive)
 - Check that client-side variables have `NEXT_PUBLIC_` prefix
 

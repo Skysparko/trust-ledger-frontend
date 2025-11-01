@@ -4,8 +4,8 @@ import { Hero } from "@/components/sections/Hero";
 import { IssuanceCard } from "@/components/cards/IssuanceCard";
 import { ProjectCard } from "@/components/cards/ProjectCard";
 import { BrochureForm } from "@/components/forms/BrochureForm";
-import { issuances } from "@/data/issuances";
-import { projects } from "@/data/projects";
+import { useOpenIssuances } from "@/hooks/swr";
+import { useProjects } from "@/hooks/swr";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { staggerContainer, fadeUp } from "@/lib/motion";
@@ -13,6 +13,9 @@ import { SectionHeader } from "@/components/sections/SectionHeader";
 import { Ambient } from "@/components/sections/Ambient";
 
 export default function Home() {
+  const { issuances, isLoading: issuancesLoading } = useOpenIssuances();
+  const { projects, isLoading: projectsLoading } = useProjects();
+
   return (
     <div className="font-sans">
       <Hero />
@@ -21,19 +24,23 @@ export default function Home() {
         <Ambient variant="blue" />
         <div className="relative mx-auto max-w-7xl px-4">
           <SectionHeader title="Featured issuances" subtitle="Curated opportunities with transparent terms" />
-          <motion.div
-            variants={staggerContainer(0.08)}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {issuances.slice(0, 3).map((i) => (
-              <motion.div key={i.id} variants={fadeUp}>
-                <IssuanceCard issuance={i} />
-              </motion.div>
-            ))}
-          </motion.div>
+          {issuancesLoading ? (
+            <div className="text-center py-12 text-zinc-500">Loading issuances...</div>
+          ) : (
+            <motion.div
+              variants={staggerContainer(0.08)}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-80px" }}
+              className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {issuances.slice(0, 3).map((i) => (
+                <motion.div key={i.id} variants={fadeUp}>
+                  <IssuanceCard issuance={i} />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
         </div>
       </section>
       <section className="relative -mt-16 overflow-hidden bg-gradient-to-b from-white/0 via-zinc-50/60 to-white py-20 dark:from-transparent dark:via-zinc-900/60 dark:to-zinc-950">
@@ -41,19 +48,23 @@ export default function Home() {
         <Ambient variant="blue" />
         <div className="relative mx-auto max-w-7xl px-4">
           <SectionHeader title="Projects" subtitle="See where your capital drives impact" />
-          <motion.div
-            variants={staggerContainer(0.08)}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-            className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {projects.slice(0, 3).map((p) => (
-              <motion.div key={p.id} variants={fadeUp}>
-                <ProjectCard project={p} />
-              </motion.div>
-            ))}
-          </motion.div>
+          {projectsLoading ? (
+            <div className="text-center py-12 text-zinc-500">Loading projects...</div>
+          ) : (
+            <motion.div
+              variants={staggerContainer(0.08)}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-80px" }}
+              className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {projects.slice(0, 3).map((p) => (
+                <motion.div key={p.id} variants={fadeUp}>
+                  <ProjectCard project={p} />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
         </div>
       </section>
       <section className="relative overflow-hidden bg-gradient-to-br from-zinc-50 via-white to-blue-50/30 py-24 dark:from-zinc-950 dark:via-zinc-900 dark:to-blue-950/20">

@@ -26,6 +26,8 @@ export type Issuance = {
 
 export type IssuanceFilters = {
   status?: Issuance["status"];
+  type?: string; // e.g., "Wind", "Solar"
+  location?: string; // e.g., "California"
   sector?: string;
   riskLevel?: Issuance["riskLevel"];
   minRate?: number;

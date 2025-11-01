@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,26 +12,46 @@ import { hydrateFromStorage } from "@/store/slices/auth";
 import { hydrateFromAuth, setKycDocument, setProfile } from "@/store/slices/profile";
 import { Lock, KeyRound, ShieldCheck, Wallet, Eye, EyeOff, Copy, Check } from "lucide-react";
 
+const profileValidationSchema = Yup.object({
+  name: Yup.string()
+    .min(2, "Name must be at least 2 characters")
+    .required("Name is required"),
+  email: Yup.string()
+    .email("Invalid email address")
+    .required("Email is required"),
+  phone: Yup.string()
+    .matches(/^\+?[\d\s-()]+$/, "Invalid phone number format")
+    .optional(),
+  iban: Yup.string()
+    .matches(/^[A-Z]{2}\d{2}[A-Z0-9]{4,30}$/, "Invalid IBAN format")
+    .required("IBAN is required"),
+  accountName: Yup.string()
+    .min(2, "Account name must be at least 2 characters")
+    .required("Account name is required"),
+  bic: Yup.string()
+    .matches(/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/, "Invalid BIC/SWIFT format")
+    .optional(),
+});
+
+const passwordValidationSchema = Yup.object({
+  currentPassword: Yup.string()
+    .required("Current password is required"),
+  newPassword: Yup.string()
+    .min(8, "Password must be at least 8 characters")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    )
+    .required("New password is required"),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref("newPassword")], "Passwords must match")
+    .required("Please confirm your password"),
+});
+
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
   const auth = useAppSelector((s) => s.auth.user);
   const profile = useAppSelector((s) => s.profile);
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone || "");
-  const [iban, setIban] = useState(profile.bank?.iban || "");
-  const [accountName, setAccountName] = useState(profile.bank?.accountName || "");
-  const [bic, setBic] = useState(profile.bank?.bic || "");
-  const [saving, setSaving] = useState(false);
-  
-  // Password change state
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
   
   // Two-factor auth state
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -39,6 +61,56 @@ export default function ProfilePage() {
   const [walletAddress, setWalletAddress] = useState("");
   const [walletNetwork, setWalletNetwork] = useState("ethereum");
   const [copiedAddress, setCopiedAddress] = useState(false);
+  
+  // Password visibility state
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const profileFormik = useFormik({
+    initialValues: {
+      name: profile.name,
+      email: profile.email,
+      phone: profile.phone || "",
+      iban: profile.bank?.iban || "",
+      accountName: profile.bank?.accountName || "",
+      bic: profile.bank?.bic || "",
+    },
+    validationSchema: profileValidationSchema,
+    enableReinitialize: true,
+    onSubmit: async (values, { setSubmitting }) => {
+      setSubmitting(true);
+      setTimeout(() => {
+        dispatch(
+          setProfile({
+            name: values.name,
+            email: values.email,
+            phone: values.phone,
+            bank: { iban: values.iban, accountName: values.accountName, bic: values.bic },
+          })
+        );
+        setSubmitting(false);
+      }, 500);
+    },
+  });
+
+  const passwordFormik = useFormik({
+    initialValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+    validationSchema: passwordValidationSchema,
+    onSubmit: async (values, { setSubmitting, resetForm }) => {
+      setSubmitting(true);
+      setTimeout(() => {
+        // Placeholder for password change API call
+        resetForm();
+        setSubmitting(false);
+        alert("Password changed successfully");
+      }, 1000);
+    },
+  });
 
   useEffect(() => {
     dispatch(hydrateFromStorage());
@@ -49,46 +121,19 @@ export default function ProfilePage() {
   }, [auth, dispatch]);
 
   useEffect(() => {
-    setName(profile.name);
-    setEmail(profile.email);
-  }, [profile.name, profile.email]);
-
-  function onSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setTimeout(() => {
-      dispatch(
-        setProfile({
-          name,
-          email,
-          phone,
-          bank: { iban, accountName, bic },
-        })
-      );
-      setSaving(false);
-    }, 500);
-  }
+    profileFormik.setValues({
+      name: profile.name,
+      email: profile.email,
+      phone: profile.phone || "",
+      iban: profile.bank?.iban || "",
+      accountName: profile.bank?.accountName || "",
+      bic: profile.bank?.bic || "",
+    });
+  }, [profile.name, profile.email, profile.phone, profile.bank]);
 
   function onUploadKyc(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) dispatch(setKycDocument(file.name));
-  }
-
-  function onChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert("New passwords do not match");
-      return;
-    }
-    setChangingPassword(true);
-    setTimeout(() => {
-      // Placeholder for password change API call
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setChangingPassword(false);
-      alert("Password changed successfully");
-    }, 1000);
   }
 
   function toggleTwoFactor() {
@@ -135,45 +180,66 @@ export default function ProfilePage() {
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={onSave} className="space-y-5">
+              <form onSubmit={profileFormik.handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                       Full Name
                     </Label>
                     <Input 
-                      id="name" 
-                      value={name} 
-                      onChange={(e) => setName(e.target.value)}
-                      className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      id="name"
+                      name="name"
+                      value={profileFormik.values.name} 
+                      onChange={profileFormik.handleChange}
+                      onBlur={profileFormik.handleBlur}
+                      className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all ${
+                        profileFormik.touched.name && profileFormik.errors.name ? "border-red-500" : ""
+                      }`}
                       placeholder="Enter your full name"
                     />
+                    {profileFormik.touched.name && profileFormik.errors.name && (
+                      <p className="text-xs text-red-400">{profileFormik.errors.name}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                       Email Address
                     </Label>
                     <Input 
-                      id="email" 
+                      id="email"
+                      name="email"
                       type="email" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      value={profileFormik.values.email} 
+                      onChange={profileFormik.handleChange}
+                      onBlur={profileFormik.handleBlur}
+                      className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all ${
+                        profileFormik.touched.email && profileFormik.errors.email ? "border-red-500" : ""
+                      }`}
                       placeholder="Enter your email address"
                     />
+                    {profileFormik.touched.email && profileFormik.errors.email && (
+                      <p className="text-xs text-red-400">{profileFormik.errors.email}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                       Phone Number
                     </Label>
                     <Input 
-                      id="phone" 
+                      id="phone"
+                      name="phone"
                       type="tel"
-                      value={phone} 
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      value={profileFormik.values.phone} 
+                      onChange={profileFormik.handleChange}
+                      onBlur={profileFormik.handleBlur}
+                      className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all ${
+                        profileFormik.touched.phone && profileFormik.errors.phone ? "border-red-500" : ""
+                      }`}
                       placeholder="Enter your phone number"
                     />
+                    {profileFormik.touched.phone && profileFormik.errors.phone && (
+                      <p className="text-xs text-red-400">{profileFormik.errors.phone}</p>
+                    )}
                   </div>
                 </div>
 
@@ -187,36 +253,57 @@ export default function ProfilePage() {
                         IBAN
                       </Label>
                       <Input 
-                        id="iban" 
-                        value={iban} 
-                        onChange={(e) => setIban(e.target.value)}
-                        className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        id="iban"
+                        name="iban"
+                        value={profileFormik.values.iban} 
+                        onChange={profileFormik.handleChange}
+                        onBlur={profileFormik.handleBlur}
+                        className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all ${
+                          profileFormik.touched.iban && profileFormik.errors.iban ? "border-red-500" : ""
+                        }`}
                         placeholder="Enter your IBAN number"
                       />
+                      {profileFormik.touched.iban && profileFormik.errors.iban && (
+                        <p className="text-xs text-red-400">{profileFormik.errors.iban}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="accountName" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                         Account Name
                       </Label>
                       <Input 
-                        id="accountName" 
-                        value={accountName} 
-                        onChange={(e) => setAccountName(e.target.value)}
-                        className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        id="accountName"
+                        name="accountName"
+                        value={profileFormik.values.accountName} 
+                        onChange={profileFormik.handleChange}
+                        onBlur={profileFormik.handleBlur}
+                        className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all ${
+                          profileFormik.touched.accountName && profileFormik.errors.accountName ? "border-red-500" : ""
+                        }`}
                         placeholder="Enter account holder name"
                       />
+                      {profileFormik.touched.accountName && profileFormik.errors.accountName && (
+                        <p className="text-xs text-red-400">{profileFormik.errors.accountName}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="bic" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                         BIC / SWIFT <span className="text-zinc-500 normal-case">(optional)</span>
                       </Label>
                       <Input 
-                        id="bic" 
-                        value={bic} 
-                        onChange={(e) => setBic(e.target.value)}
-                        className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        id="bic"
+                        name="bic"
+                        value={profileFormik.values.bic} 
+                        onChange={profileFormik.handleChange}
+                        onBlur={profileFormik.handleBlur}
+                        className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all ${
+                          profileFormik.touched.bic && profileFormik.errors.bic ? "border-red-500" : ""
+                        }`}
                         placeholder="Enter BIC / SWIFT code (optional)"
                       />
+                      {profileFormik.touched.bic && profileFormik.errors.bic && (
+                        <p className="text-xs text-red-400">{profileFormik.errors.bic}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -224,10 +311,10 @@ export default function ProfilePage() {
                 <div className="flex justify-end pt-4 border-t border-zinc-800/50">
                   <Button 
                     type="submit" 
-                    disabled={saving}
+                    disabled={profileFormik.isSubmitting}
                     className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 font-medium px-6"
                   >
-                    {saving ? "Saving..." : "Save Changes"}
+                    {profileFormik.isSubmitting ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </form>
@@ -288,7 +375,7 @@ export default function ProfilePage() {
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={onChangePassword} className="space-y-4">
+              <form onSubmit={passwordFormik.handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                     Current Password
@@ -296,10 +383,14 @@ export default function ProfilePage() {
                   <div className="relative">
                     <Input
                       id="currentPassword"
+                      name="currentPassword"
                       type={showCurrentPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 pr-10 transition-all"
+                      value={passwordFormik.values.currentPassword}
+                      onChange={passwordFormik.handleChange}
+                      onBlur={passwordFormik.handleBlur}
+                      className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 pr-10 transition-all ${
+                        passwordFormik.touched.currentPassword && passwordFormik.errors.currentPassword ? "border-red-500" : ""
+                      }`}
                       placeholder="Enter your current password"
                     />
                     <button
@@ -310,6 +401,9 @@ export default function ProfilePage() {
                       {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {passwordFormik.touched.currentPassword && passwordFormik.errors.currentPassword && (
+                    <p className="text-xs text-red-400">{passwordFormik.errors.currentPassword}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="newPassword" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
@@ -318,10 +412,14 @@ export default function ProfilePage() {
                   <div className="relative">
                     <Input
                       id="newPassword"
+                      name="newPassword"
                       type={showNewPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 pr-10 transition-all"
+                      value={passwordFormik.values.newPassword}
+                      onChange={passwordFormik.handleChange}
+                      onBlur={passwordFormik.handleBlur}
+                      className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 pr-10 transition-all ${
+                        passwordFormik.touched.newPassword && passwordFormik.errors.newPassword ? "border-red-500" : ""
+                      }`}
                       placeholder="Enter your new password"
                     />
                     <button
@@ -332,6 +430,9 @@ export default function ProfilePage() {
                       {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {passwordFormik.touched.newPassword && passwordFormik.errors.newPassword && (
+                    <p className="text-xs text-red-400">{passwordFormik.errors.newPassword}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
@@ -340,10 +441,14 @@ export default function ProfilePage() {
                   <div className="relative">
                     <Input
                       id="confirmPassword"
+                      name="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 pr-10 transition-all"
+                      value={passwordFormik.values.confirmPassword}
+                      onChange={passwordFormik.handleChange}
+                      onBlur={passwordFormik.handleBlur}
+                      className={`h-11 bg-zinc-800/40 border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 pr-10 transition-all ${
+                        passwordFormik.touched.confirmPassword && passwordFormik.errors.confirmPassword ? "border-red-500" : ""
+                      }`}
                       placeholder="Confirm your new password"
                     />
                     <button
@@ -354,13 +459,16 @@ export default function ProfilePage() {
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {passwordFormik.touched.confirmPassword && passwordFormik.errors.confirmPassword && (
+                    <p className="text-xs text-red-400">{passwordFormik.errors.confirmPassword}</p>
+                  )}
                 </div>
                 <Button
                   type="submit"
-                  disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+                  disabled={passwordFormik.isSubmitting || !passwordFormik.isValid}
                   className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 font-medium"
                 >
-                  {changingPassword ? "Changing..." : "Update Password"}
+                  {passwordFormik.isSubmitting ? "Changing..." : "Update Password"}
                 </Button>
               </form>
             </CardContent>

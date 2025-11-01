@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2 } from "lucide-react";
-import type { Issuance } from "@/data/issuances";
+import type { Issuance } from "@/api/issuance.api";
 
 export function IssuanceCard({ issuance }: { issuance: Issuance }) {
   return (
