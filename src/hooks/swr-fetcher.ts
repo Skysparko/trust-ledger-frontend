@@ -68,17 +68,20 @@ export const SwrKeys = {
 
 // Auth fetchers
 export const authFetchers = {
-  currentUser: (() => AuthApi.getCurrentUser()) as Fetcher<any>,
+  currentUser: ((key: string) => AuthApi.getCurrentUser()) as Fetcher<any, string>,
 };
 
 // Investment fetchers
 export const investmentFetchers = {
-  all: ((key: string, filters?: any) => InvestmentApi.getInvestments(filters)) as Fetcher<any, [string, any?]>,
+  all: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return InvestmentApi.getInvestments(filters);
+  }) as Fetcher<any, string | [string, any?]>,
   detail: ((key: string) => {
     const id = key.split("/").pop() || "";
     return InvestmentApi.getInvestment(id);
   }) as Fetcher<any, string>,
-  stats: (() => InvestmentApi.getInvestmentStats()) as Fetcher<any>,
+  stats: ((key: string) => InvestmentApi.getInvestmentStats()) as Fetcher<any, string>,
 };
 
 // Issuance fetchers
@@ -91,8 +94,8 @@ export const issuanceFetchers = {
     const id = key.split("/").pop() || "";
     return IssuanceApi.getIssuance(id);
   }) as Fetcher<any, string>,
-  open: (() => IssuanceApi.getOpenIssuances()) as Fetcher<any>,
-  upcoming: (() => IssuanceApi.getUpcomingIssuances()) as Fetcher<any>,
+  open: ((key: string) => IssuanceApi.getOpenIssuances()) as Fetcher<any, string>,
+  upcoming: ((key: string) => IssuanceApi.getUpcomingIssuances()) as Fetcher<any, string>,
 };
 
 // Project fetchers
@@ -109,12 +112,12 @@ export const projectFetchers = {
 
 // Profile fetchers
 export const profileFetchers = {
-  current: (() => ProfileApi.getProfile()) as Fetcher<any>,
+  current: ((key: string) => ProfileApi.getProfile()) as Fetcher<any, string>,
 };
 
 // Admin fetchers
 export const adminFetchers = {
-  stats: (() => AdminApi.getStats()) as Fetcher<any>,
+  stats: ((key: string) => AdminApi.getStats()) as Fetcher<any, string>,
   users: ((key: string | [string, any?]) => {
     const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
     return AdminApi.getUsers(filters);
@@ -147,7 +150,7 @@ export const publicFetchers = {
     const id = key.split("/").pop() || "";
     return PublicApi.getPost(id);
   }) as Fetcher<any, string>,
-  webinars: (() => PublicApi.getWebinars()) as Fetcher<any>,
+  webinars: ((key: string) => PublicApi.getWebinars()) as Fetcher<any, string>,
 };
 
 /**
@@ -160,16 +163,16 @@ export const swrFetcher: Fetcher<any, string | [string, any?]> = async (key: str
 
   // Auth endpoints
   if (endpoint === "/auth/me") {
-    return authFetchers.currentUser();
+    return authFetchers.currentUser(endpoint);
   }
 
   // Investment endpoints
   if (endpoint === "/investments" || endpoint.startsWith("/investments/")) {
     if (endpoint === "/investments") {
-      return investmentFetchers.all(endpoint, filters);
+      return (investmentFetchers.all as any)([endpoint, filters]);
     }
     if (endpoint === "/investments/stats") {
-      return investmentFetchers.stats();
+      return investmentFetchers.stats(endpoint);
     }
     return investmentFetchers.detail(endpoint);
   }
@@ -179,7 +182,7 @@ export const swrFetcher: Fetcher<any, string | [string, any?]> = async (key: str
     if (endpoint.startsWith("/issuances/") && !endpoint.endsWith("/open") && !endpoint.endsWith("/upcoming")) {
       return issuanceFetchers.detail(endpoint);
     }
-    return issuanceFetchers.all(endpoint, filters);
+    return (issuanceFetchers.all as any)([endpoint, filters]);
   }
 
   // Project endpoints
@@ -187,33 +190,33 @@ export const swrFetcher: Fetcher<any, string | [string, any?]> = async (key: str
     if (endpoint.startsWith("/projects/")) {
       return projectFetchers.detail(endpoint);
     }
-    return projectFetchers.all(endpoint, filters);
+    return (projectFetchers.all as any)([endpoint, filters]);
   }
 
   // Profile endpoints
   if (endpoint === "/profile") {
-    return profileFetchers.current();
+    return profileFetchers.current(endpoint);
   }
 
   // Admin endpoints
   if (endpoint.startsWith("/admin/")) {
     if (endpoint === "/admin/stats") {
-      return adminFetchers.stats();
+      return adminFetchers.stats(endpoint);
     }
     if (endpoint === "/admin/users" || endpoint.startsWith("/admin/users/")) {
       if (endpoint.startsWith("/admin/users/") && endpoint !== "/admin/users") {
         return adminFetchers.user(endpoint);
       }
-      return adminFetchers.users(endpoint, filters);
+      return (adminFetchers.users as any)([endpoint, filters]);
     }
     if (endpoint === "/admin/transactions" || endpoint.startsWith("/admin/transactions/")) {
       if (endpoint.startsWith("/admin/transactions/") && endpoint !== "/admin/transactions") {
         return adminFetchers.transaction(endpoint);
       }
-      return adminFetchers.transactions(endpoint, filters);
+      return (adminFetchers.transactions as any)([endpoint, filters]);
     }
     if (endpoint === "/admin/documents" || endpoint.startsWith("/admin/documents/")) {
-      return adminFetchers.documents(endpoint, filters);
+      return (adminFetchers.documents as any)([endpoint, filters]);
     }
   }
 
@@ -222,11 +225,11 @@ export const swrFetcher: Fetcher<any, string | [string, any?]> = async (key: str
     if (endpoint.startsWith("/posts/") && endpoint !== "/posts") {
       return publicFetchers.post(endpoint);
     }
-    return publicFetchers.posts(endpoint, filters);
+    return (publicFetchers.posts as any)([endpoint, filters]);
   }
 
   if (endpoint === "/webinars") {
-    return publicFetchers.webinars();
+    return publicFetchers.webinars(endpoint);
   }
 
   throw new Error(`Unknown SWR key: ${endpoint}`);
