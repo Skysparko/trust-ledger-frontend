@@ -11,7 +11,7 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { hydrateFromStorage } from "@/store/slices/auth";
 import { hydrateFromAuth, setKycDocument, setProfile } from "@/store/slices/profile";
 import { AuthApi } from "@/api/auth.api";
-import { useUserProfile, useUpdateUserProfile, useUploadKycDocument, useToggleTwoFactor, useUpdateWallet } from "@/hooks/swr/useUser";
+import { useUserProfile, useUpdateUserProfile, useUserUploadKycDocument, useToggleTwoFactor, useUpdateWallet } from "@/hooks/swr/useUser";
 import { Lock, KeyRound, ShieldCheck, Wallet, Eye, EyeOff, Copy, Check } from "lucide-react";
 
 const profileValidationSchema = Yup.object({
@@ -58,7 +58,7 @@ export default function ProfilePage() {
   // Fetch profile from API
   const { profile: apiProfile, isLoading: profileLoading, mutate: refreshProfile } = useUserProfile();
   const { updateProfile, isUpdating } = useUpdateUserProfile();
-  const { uploadKycDocument, isUploading } = useUploadKycDocument();
+  const { uploadKycDocument, isUploading } = useUserUploadKycDocument();
   const { toggleTwoFactor, isUpdating: isTogglingTwoFactor } = useToggleTwoFactor();
   const { updateWallet, isUpdating: isUpdatingWallet } = useUpdateWallet();
   
@@ -81,9 +81,14 @@ export default function ProfilePage() {
         name: apiProfile.name,
         email: apiProfile.email,
         phone: apiProfile.phone,
-        bank: apiProfile.bank,
+        bank: apiProfile.bank?.iban && apiProfile.bank?.accountName
+          ? {
+              iban: apiProfile.bank.iban,
+              accountName: apiProfile.bank.accountName,
+              bic: apiProfile.bank.bic,
+            }
+          : undefined,
         kycDocumentName: apiProfile.kycDocumentName,
-        kycStatus: apiProfile.kycStatus,
         agreementSigned: apiProfile.agreementSigned,
       }));
     }
@@ -642,7 +647,7 @@ export default function ProfilePage() {
                   <select
                     id="walletNetwork"
                     value={walletNetwork}
-                    onChange={(e) => setWalletNetwork(e.target.value)}
+                    onChange={(e) => setWalletNetwork(e.target.value as "ethereum" | "polygon" | "binance" | "arbitrum")}
                     className="h-11 w-full rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
                   >
                     <option value="ethereum">Ethereum</option>

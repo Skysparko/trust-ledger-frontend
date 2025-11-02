@@ -2,12 +2,12 @@ import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import { SwrKeys } from "../swr-fetcher";
 import type {
-  UserProfile,
-  UpdateProfilePayload,
+  UserApiProfile,
+  UpdateUserProfilePayload,
   ToggleTwoFactorPayload,
   UpdateWalletPayload,
   UserInvestment,
-  CreateInvestmentPayload,
+  CreateUserInvestmentPayload,
   UserTransaction,
   TransactionFilters,
   UserAsset,
@@ -23,7 +23,7 @@ import { UserApi } from "@/api/user.api";
  * Hook for fetching user profile
  */
 export function useUserProfile() {
-  const { data, error, isLoading, mutate } = useSWR<UserProfile>(
+  const { data, error, isLoading, mutate } = useSWR<UserApiProfile>(
     SwrKeys.user.profile(),
     () => UserApi.getProfile(),
     {
@@ -47,7 +47,7 @@ export function useUserProfile() {
 export function useUpdateUserProfile() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.user.profile(),
-    async (_, { arg }: { arg: UpdateProfilePayload }) => {
+    async (_, { arg }: { arg: UpdateUserProfilePayload }) => {
       return UserApi.updateProfile(arg);
     }
   );
@@ -62,7 +62,7 @@ export function useUpdateUserProfile() {
 /**
  * Hook for uploading KYC document
  */
-export function useUploadKycDocument() {
+export function useUserUploadKycDocument() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.user.profile(),
     async (_, { arg }: { arg: File }) => {
@@ -80,7 +80,7 @@ export function useUploadKycDocument() {
 /**
  * Hook for signing agreement
  */
-export function useSignAgreement() {
+export function useUserSignAgreement() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.user.profile(),
     async () => {
@@ -160,10 +160,10 @@ export function useUserInvestments() {
 /**
  * Hook for creating investment
  */
-export function useCreateInvestment() {
+export function useUserCreateInvestment() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.user.investments(),
-    async (_, { arg }: { arg: CreateInvestmentPayload }) => {
+    async (_, { arg }: { arg: CreateUserInvestmentPayload }) => {
       return UserApi.createInvestment(arg);
     }
   );

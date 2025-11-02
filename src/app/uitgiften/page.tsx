@@ -137,7 +137,7 @@ export default function UitgiftenPage() {
             options={[
               { label: "All opportunities", value: "all" },
               ...(isLoadingDropdown 
-                ? [{ label: "Loading...", value: "loading", disabled: true }]
+                ? [{ label: "Loading...", value: "loading" }]
                 : dropdownOpportunities.map((opp) => ({
                     label: opp.title,
                     value: opp.id,

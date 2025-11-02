@@ -3,7 +3,7 @@ import { BaseApi } from "./base.api";
 /**
  * User Profile Types
  */
-export type UserProfile = {
+export type UserApiProfile = {
   name: string;
   email: string;
   phone?: string;
@@ -20,7 +20,7 @@ export type UserProfile = {
   walletNetwork?: "ethereum" | "polygon" | "binance" | "arbitrum";
 };
 
-export type UpdateProfilePayload = Partial<UserProfile>;
+export type UpdateUserProfilePayload = Partial<UserApiProfile>;
 
 export type ToggleTwoFactorPayload = {
   enabled: boolean;
@@ -45,7 +45,7 @@ export type UserInvestment = {
   updatedAt: string;
 };
 
-export type CreateInvestmentPayload = {
+export type CreateUserInvestmentPayload = {
   investmentOpportunityId: string;
   bonds: number;
   paymentMethod: "bank_transfer" | "credit_card" | "sepa";
@@ -109,8 +109,8 @@ export class UserApi extends BaseApi {
    * Get user profile
    * GET /api/user/profile
    */
-  static async getProfile(): Promise<UserProfile> {
-    return this.get<UserProfile>("/user/profile");
+  static async getProfile(): Promise<UserApiProfile> {
+    return this.get<UserApiProfile>("/user/profile");
   }
 
   /**
@@ -118,8 +118,8 @@ export class UserApi extends BaseApi {
    * PUT /api/user/profile
    * All fields are optional - include only what you want to update
    */
-  static async updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {
-    return this.put<UserProfile>("/user/profile", payload);
+  static async updateProfile(payload: UpdateUserProfilePayload): Promise<UserApiProfile> {
+    return this.put<UserApiProfile>("/user/profile", payload);
   }
 
   /**
@@ -158,8 +158,8 @@ export class UserApi extends BaseApi {
    * Update wallet address and network
    * PUT /api/user/wallet
    */
-  static async updateWallet(payload: UpdateWalletPayload): Promise<UserProfile> {
-    return this.put<UserProfile>("/user/wallet", payload);
+  static async updateWallet(payload: UpdateWalletPayload): Promise<UserApiProfile> {
+    return this.put<UserApiProfile>("/user/wallet", payload);
   }
 
   /**
@@ -180,7 +180,7 @@ export class UserApi extends BaseApi {
    * Note: amount is calculated as bonds * 100 (€100 per bond)
    * Investment must meet minimum and maximum investment requirements of the investment opportunity
    */
-  static async createInvestment(payload: CreateInvestmentPayload): Promise<UserInvestment> {
+  static async createInvestment(payload: CreateUserInvestmentPayload): Promise<UserInvestment> {
     return this.post<UserInvestment>("/user/investments", payload);
   }
 

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { addInvestment } from "@/store/slices/investments";
 import { useInvestmentOpportunitiesDropdown } from "@/hooks/swr/useInvestmentOpportunities";
-import { useCreateInvestment } from "@/hooks/swr/useUser";
+import { useUserCreateInvestment } from "@/hooks/swr/useUser";
 import { useUserInvestments } from "@/hooks/swr/useUser";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -36,7 +36,7 @@ export function SubscriptionModal() {
   const [error, setError] = useState<string | null>(null);
   
   // API hooks
-  const { createInvestment, isCreating, error: createError } = useCreateInvestment();
+  const { createInvestment, isCreating, error: createError } = useUserCreateInvestment();
   const { mutate: refreshInvestments } = useUserInvestments();
   
   // Fetch investment opportunities for dropdown

@@ -54,7 +54,7 @@ export default function AdminWebinarsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (item: Webinar) => {
+  const handleEdit = (item: AdminWebinar) => {
     setEditingItem(item);
     setFormData(item);
     setIsDialogOpen(true);

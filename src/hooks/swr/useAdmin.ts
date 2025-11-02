@@ -258,20 +258,21 @@ export function useUpdateUserStatus() {
 /**
  * Hook for updating transaction status (admin)
  */
-export function useUpdateTransactionStatus() {
-  const { trigger, isMutating, error } = useSWRMutation(
-    SwrKeys.admin.transactions(),
-    async (_, { arg }: { arg: { id: string; status: AdminTransaction["status"] } }) => {
-      return AdminApi.updateTransactionStatus(arg.id, arg.status);
-    }
-  );
+// TODO: Implement updateTransactionStatus in AdminApi
+// export function useUpdateTransactionStatus() {
+//   const { trigger, isMutating, error } = useSWRMutation(
+//     SwrKeys.admin.transactions(),
+//     async (_, { arg }: { arg: { id: string; status: AdminTransaction["status"] } }) => {
+//       return AdminApi.updateTransactionStatus(arg.id, arg.status);
+//     }
+//   );
 
-  return {
-    updateTransactionStatus: trigger,
-    isUpdating: isMutating,
-    error,
-  };
-}
+//   return {
+//     updateTransactionStatus: trigger,
+//     isUpdating: isMutating,
+//     error,
+//   };
+// }
 
 /**
  * Hook for fetching a single admin document
@@ -384,7 +385,7 @@ export function useAdminIssuance(id: string | null) {
 /**
  * Hook for creating issuance (admin)
  */
-export function useCreateIssuance() {
+export function useAdminCreateIssuance() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.admin.issuances(),
     async (_, { arg }: { arg: CreateAdminIssuancePayload }) => {
@@ -402,7 +403,7 @@ export function useCreateIssuance() {
 /**
  * Hook for updating issuance (admin)
  */
-export function useUpdateIssuance() {
+export function useAdminUpdateIssuance() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.admin.issuances(),
     async (_, { arg }: { arg: { id: string; payload: UpdateAdminIssuancePayload } }) => {
@@ -420,7 +421,7 @@ export function useUpdateIssuance() {
 /**
  * Hook for deleting issuance (admin)
  */
-export function useDeleteIssuance() {
+export function useAdminDeleteIssuance() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.admin.issuances(),
     async (_, { arg }: { arg: { id: string } }) => {
@@ -501,7 +502,7 @@ export function useAdminProject(id: string | null) {
 /**
  * Hook for creating project (admin)
  */
-export function useCreateProject() {
+export function useAdminCreateProject() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.admin.projects(),
     async (_, { arg }: { arg: CreateAdminProjectPayload }) => {
@@ -519,7 +520,7 @@ export function useCreateProject() {
 /**
  * Hook for updating project (admin)
  */
-export function useUpdateProject() {
+export function useAdminUpdateProject() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.admin.projects(),
     async (_, { arg }: { arg: { id: string; payload: UpdateAdminProjectPayload } }) => {
@@ -537,7 +538,7 @@ export function useUpdateProject() {
 /**
  * Hook for deleting project (admin)
  */
-export function useDeleteProject() {
+export function useAdminDeleteProject() {
   const { trigger, isMutating, error } = useSWRMutation(
     SwrKeys.admin.projects(),
     async (_, { arg }: { arg: { id: string } }) => {
@@ -809,7 +810,7 @@ export function useConfirmInvestment() {
 /**
  * Hook for cancelling investment (admin)
  */
-export function useCancelInvestment() {
+export function useAdminCancelInvestment() {
   const { trigger, isMutating, error } = useSWRMutation(
     "/admin/investments",
     async (_, { arg }: { arg: { id: string } }) => {

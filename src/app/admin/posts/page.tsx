@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useAdminPosts, useCreatePost, useUpdatePost, useDeletePost } from "@/hooks/swr/useAdmin";
-import type { AdminPost } from "@/api/admin.api";
+import type { AdminPost, UpdateAdminPostPayload } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
@@ -56,7 +56,7 @@ export default function AdminPostsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (item: Post) => {
+  const handleEdit = (item: AdminPost) => {
     setEditingItem(item);
     setFormData(item);
     setIsDialogOpen(true);
@@ -76,7 +76,20 @@ export default function AdminPostsPage() {
   const handleSave = async () => {
     try {
       if (editingItem) {
-        await updatePost({ id: editingItem.id, payload: formData });
+        // Transform formData to match UpdateAdminPostPayload type
+        const payload: UpdateAdminPostPayload = {};
+        if (formData.title) payload.title = formData.title;
+        if (formData.content) payload.content = formData.content;
+        if (formData.category) {
+          // Normalize category to uppercase
+          const normalizedCategory = formData.category.toUpperCase();
+          if (normalizedCategory === "NEWS" || normalizedCategory === "KNOWLEDGE") {
+            payload.category = normalizedCategory as "NEWS" | "KNOWLEDGE";
+          }
+        }
+        if (formData.isPublished !== undefined) payload.isPublished = formData.isPublished;
+        if (formData.tags) payload.tags = formData.tags;
+        await updatePost({ id: editingItem.id, payload });
       } else {
         await createPost({
           title: formData.title || "",
@@ -228,7 +241,7 @@ export default function AdminPostsPage() {
                     { label: "News", value: "NEWS" },
                     { label: "Knowledge", value: "KNOWLEDGE" },
                   ]}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  onValueChange={(value) => setFormData({ ...formData, category: value as AdminPost["category"] })}
                 />
               </div>
               <div className="space-y-2">

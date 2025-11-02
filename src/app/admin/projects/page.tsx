@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useAdminProjects, useCreateProject, useUpdateProject, useDeleteProject } from "@/hooks/swr/useAdmin";
+import { useAdminProjects, useAdminCreateProject, useAdminUpdateProject, useAdminDeleteProject } from "@/hooks/swr/useAdmin";
 import type { AdminProject } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 
@@ -42,9 +42,9 @@ export default function AdminProjectsPage() {
     limit: ITEMS_PER_PAGE,
   });
 
-  const { createProject, isCreating } = useCreateProject();
-  const { updateProject, isUpdating } = useUpdateProject();
-  const { deleteProject, isDeleting } = useDeleteProject();
+  const { createProject, isCreating } = useAdminCreateProject();
+  const { updateProject, isUpdating } = useAdminUpdateProject();
+  const { deleteProject, isDeleting } = useAdminDeleteProject();
 
   // Ensure paginatedItems is always an array
   const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
