@@ -65,7 +65,7 @@ export default function ContactPage() {
         <Card>
           <CardHeader>
             <h2 className="text-2xl font-bold">Newsletter</h2>
-            <p className="mt-2 text-base text-zinc-600 dark:text-zinc-400">Get updates on new issuances and projects.</p>
+            <p className="mt-2 text-base text-zinc-600 dark:text-zinc-400">Get updates on new investment opportunities and projects.</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={formik.handleSubmit} className="space-y-2">

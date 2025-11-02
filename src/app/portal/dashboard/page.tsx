@@ -53,7 +53,7 @@ export default function DashboardPage() {
     if (!apiInvestments) return [];
     return apiInvestments.map((inv) => ({
       id: inv.id,
-      issuance: `Issuance ${inv.issuanceId}`,
+      issuance: `Investment Opportunity ${inv.issuanceId}`,
       date: inv.createdAt,
       amount: inv.amount,
       bonds: inv.bonds,
@@ -327,7 +327,7 @@ export default function DashboardPage() {
               <thead>
                 <tr className="border-b border-zinc-800/50 bg-zinc-900/50">
                   <th className="px-6 py-4 text-xs font-semibold uppercase tracking-[0.1em] text-zinc-400/80">
-                    Issuance
+                    Investment Opportunity
                   </th>
                   <th className="px-6 py-4 text-xs font-semibold uppercase tracking-[0.1em] text-zinc-400/80">
                     Date

@@ -1,10 +1,10 @@
 "use client";
 
 import { Hero } from "@/components/sections/Hero";
-import { IssuanceCard } from "@/components/cards/IssuanceCard";
+import { InvestmentOpportunityCard } from "@/components/cards/InvestmentOpportunityCard";
 import { ProjectCard } from "@/components/cards/ProjectCard";
 import { BrochureForm } from "@/components/forms/BrochureForm";
-import { useOpenIssuances } from "@/hooks/swr";
+import { useFeaturedInvestmentOpportunities } from "@/hooks/swr/useInvestmentOpportunities";
 import { useProjects } from "@/hooks/swr";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -13,7 +13,7 @@ import { SectionHeader } from "@/components/sections/SectionHeader";
 import { Ambient } from "@/components/sections/Ambient";
 
 export default function Home() {
-  const { issuances, isLoading: issuancesLoading } = useOpenIssuances();
+  const { opportunities, isLoading: opportunitiesLoading } = useFeaturedInvestmentOpportunities(3);
   const { projects, isLoading: projectsLoading } = useProjects();
 
   return (
@@ -23,9 +23,9 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-transparent to-white/80 dark:to-zinc-950/80" />
         <Ambient variant="blue" />
         <div className="relative mx-auto max-w-7xl px-4">
-          <SectionHeader title="Featured issuances" subtitle="Curated opportunities with transparent terms" />
-          {issuancesLoading ? (
-            <div className="text-center py-12 text-zinc-500">Loading issuances...</div>
+          <SectionHeader title="Featured Investment Opportunities" subtitle="Curated opportunities with transparent terms" />
+          {opportunitiesLoading ? (
+            <div className="text-center py-12 text-zinc-500">Loading investment opportunities...</div>
           ) : (
             <motion.div
               variants={staggerContainer(0.08)}
@@ -34,9 +34,9 @@ export default function Home() {
               viewport={{ once: true, margin: "-80px" }}
               className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
             >
-              {issuances.slice(0, 3).map((i) => (
+              {opportunities.slice(0, 3).map((i) => (
                 <motion.div key={i.id} variants={fadeUp}>
-                  <IssuanceCard issuance={i} />
+                  <InvestmentOpportunityCard opportunity={i} />
                 </motion.div>
               ))}
             </motion.div>

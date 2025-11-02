@@ -1,25 +1,36 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, ArrowRight } from "lucide-react";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { hydrateFromStorage } from "@/store/slices/auth";
 import type { InvestmentOpportunityListItem } from "@/api/investment-opportunities.api";
 
 export function InvestmentOpportunityCard({ opportunity }: { opportunity: InvestmentOpportunityListItem }) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const fundingProgress = opportunity.fundingProgress || 
     ((opportunity.currentFunding / opportunity.totalFundingTarget) * 100);
+
+  // Ensure auth state is hydrated from storage
+  useEffect(() => {
+    dispatch(hydrateFromStorage());
+  }, [dispatch]);
 
   const handleViewDetails = () => {
     if (!opportunity.id) {
       console.error("[InvestmentOpportunityCard] No ID available for opportunity:", opportunity);
       return;
     }
-    const url = `/portal/issues/${opportunity.id}`;
-    console.log("[InvestmentOpportunityCard] Navigating to:", url, "ID:", opportunity.id);
+    // Route to portal if authenticated, otherwise to public page
+    const url = isAuthenticated ? `/portal/issues/${opportunity.id}` : `/uitgiften/${opportunity.id}`;
+    console.log("[InvestmentOpportunityCard] Navigating to:", url, "ID:", opportunity.id, "Authenticated:", isAuthenticated);
     router.push(url);
   };
 

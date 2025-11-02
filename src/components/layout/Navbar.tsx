@@ -12,7 +12,7 @@ import { hydrateFromStorage, logout } from "@/store/slices/auth";
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/uitgiften", label: "Issuances" },
+  { href: "/uitgiften", label: "Investment Opportunities" },
   { href: "/projecten", label: "Projects" },
   { href: "/kennis", label: "Knowledge" },
   { href: "/webinars", label: "Webinars" },

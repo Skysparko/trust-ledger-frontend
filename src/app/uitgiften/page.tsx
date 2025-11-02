@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useIssuances } from "@/hooks/swr";
-import { IssuanceCard } from "@/components/cards/IssuanceCard";
+import { useInvestmentOpportunities } from "@/hooks/swr/useInvestmentOpportunities";
+import { InvestmentOpportunityCard } from "@/components/cards/InvestmentOpportunityCard";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
@@ -16,25 +16,26 @@ export default function UitgiftenPage() {
 
   // Build API filters
   const apiFilters = useMemo(() => {
-    const filters: any = {};
+    const filters: any = {
+      page: 1,
+      limit: 100,
+    };
     if (type !== "all") filters.type = type;
     if (location !== "all") filters.location = location;
+    if (minRate) filters.minRate = parseFloat(minRate);
     return filters;
-  }, [type, location]);
+  }, [type, location, minRate]);
 
-  const { issuances, isLoading } = useIssuances(Object.keys(apiFilters).length > 0 ? apiFilters : undefined);
+  const { opportunities, isLoading } = useInvestmentOpportunities(apiFilters);
 
   const uniqueLocations = useMemo(() => {
-    const set = new Set(issuances.map((i) => i.location));
+    const set = new Set(opportunities.map((i) => i.location));
     return Array.from(set);
-  }, [issuances]);
+  }, [opportunities]);
 
   const filtered = useMemo(() => {
-    return issuances.filter((i) => {
-      if (minRate && i.rate < Number(minRate)) return false;
-      return true;
-    });
-  }, [issuances, minRate]);
+    return opportunities;
+  }, [opportunities]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
@@ -58,7 +59,7 @@ export default function UitgiftenPage() {
         />
       </motion.div>
       <div className="relative mx-auto max-w-7xl px-4 py-12">
-        <SectionHeader title="Issuances" subtitle="Filter and explore active offerings" className="mb-8" />
+        <SectionHeader title="Investment Opportunities" subtitle="Filter and explore active offerings" className="mb-8" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -92,9 +93,9 @@ export default function UitgiftenPage() {
           />
         </motion.div>
         {isLoading ? (
-          <div className="text-center py-12 text-zinc-500">Loading issuances...</div>
+          <div className="text-center py-12 text-zinc-500">Loading investment opportunities...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-zinc-500">No issuances found matching your filters.</div>
+          <div className="text-center py-12 text-zinc-500">No investment opportunities found matching your filters.</div>
         ) : (
           <motion.div
             variants={staggerContainer(0.08)}
@@ -105,7 +106,7 @@ export default function UitgiftenPage() {
           >
             {filtered.map((i) => (
               <motion.div key={i.id} variants={fadeUp}>
-                <IssuanceCard issuance={i} />
+                <InvestmentOpportunityCard opportunity={i} />
               </motion.div>
             ))}
           </motion.div>

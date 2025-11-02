@@ -31,7 +31,7 @@ export function Footer() {
               <Link href="/projecten">Projects</Link>
             </li>
             <li>
-              <Link href="/uitgiften">Issuances</Link>
+              <Link href="/uitgiften">Investment Opportunities</Link>
             </li>
             <li>
               <Link href="/kennis">Knowledge</Link>

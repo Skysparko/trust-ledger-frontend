@@ -56,8 +56,33 @@ export type BrochureRequestResponse = {
  */
 export class PublicApi extends BaseApi {
   /**
-   * Get all issuances (public)
+   * Get all investment opportunities (public)
    * @param filters Optional filters for status, type, location
+   */
+  static async getInvestmentOpportunities(filters?: {
+    status?: "active" | "closed" | "upcoming" | "paused";
+    type?: string;
+    location?: string;
+    sector?: string;
+    riskLevel?: "Low" | "Medium" | "High";
+    minRate?: number;
+    page?: number;
+    limit?: number;
+  }): Promise<any> {
+    const params = filters ? new URLSearchParams(filters as any).toString() : "";
+    return this.get<any>(`/investment-opportunities${params ? `?${params}` : ""}`);
+  }
+
+  /**
+   * Get investment opportunity by ID (public)
+   */
+  static async getInvestmentOpportunity(id: string): Promise<any> {
+    return this.get<any>(`/investment-opportunities/${id}`);
+  }
+
+  /**
+   * @deprecated Use getInvestmentOpportunities instead
+   * Get all issuances (public) - deprecated, use getInvestmentOpportunities
    */
   static async getIssuances(filters?: {
     status?: "open" | "closed" | "upcoming";
@@ -65,14 +90,15 @@ export class PublicApi extends BaseApi {
     location?: string;
   }): Promise<any[]> {
     const params = filters ? new URLSearchParams(filters as any).toString() : "";
-    return this.get<any[]>(`/issuances${params ? `?${params}` : ""}`);
+    return this.get<any[]>(`/investment-opportunities${params ? `?${params}` : ""}`);
   }
 
   /**
-   * Get issuance by ID (public)
+   * @deprecated Use getInvestmentOpportunity instead
+   * Get issuance by ID (public) - deprecated, use getInvestmentOpportunity
    */
   static async getIssuance(id: string): Promise<any> {
-    return this.get<any>(`/issuances/${id}`);
+    return this.get<any>(`/investment-opportunities/${id}`);
   }
 
   /**

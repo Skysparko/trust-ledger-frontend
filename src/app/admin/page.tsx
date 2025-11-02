@@ -49,7 +49,7 @@ export default function AdminDashboardPage() {
       color: "text-purple-600 dark:text-purple-400",
     },
     {
-      title: "Active Issuances",
+      title: "Active Investment Opportunities",
       value: stats.activeIssuances.toString(),
       icon: FileText,
       trend: "0",

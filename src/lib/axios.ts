@@ -66,6 +66,75 @@ const isAdminEndpoint = (url: string, method?: string): boolean => {
   );
 };
 
+// Helper function to check if user is logged in
+const isUserLoggedIn = (): boolean => {
+  if (typeof document === "undefined" || typeof window === "undefined") return false;
+  
+  try {
+    // Check if auth_user exists in localStorage (indicates user is logged in)
+    const authUser = localStorage.getItem("auth_user");
+    if (authUser) {
+      const parsed = JSON.parse(authUser);
+      if (parsed && typeof parsed === "object") {
+        return true;
+      }
+    }
+    
+    // Also check for auth_token as fallback
+    const authToken = localStorage.getItem("auth_token");
+    if (authToken && authToken !== "undefined" && authToken !== "null") {
+      return true;
+    }
+    
+    // Check cookies for auth_token
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split("=");
+      if (name === "auth_token" || name === "token") {
+        const tokenValue = decodeURIComponent(value);
+        if (tokenValue && tokenValue !== "undefined" && tokenValue !== "null") {
+          return true;
+        }
+      }
+    }
+  } catch {
+    // Ignore parsing errors
+  }
+  
+  return false;
+};
+
+// Helper function to check if URL is one of the investment-opportunities endpoints that need conditional auth
+const isInvestmentOpportunitiesConditionalAuthEndpoint = (url: string): boolean => {
+  if (!url) return false;
+  
+  // Extract path from URL (handles both absolute and relative URLs)
+  let urlPath = url;
+  try {
+    if (url.includes("://")) {
+      // Absolute URL - extract pathname
+      urlPath = new URL(url).pathname;
+    } else {
+      // Relative URL - extract path part (before query string)
+      urlPath = url.split("?")[0];
+    }
+  } catch {
+    // If URL parsing fails, use the original string (without query params)
+    urlPath = url.split("?")[0];
+  }
+  
+  // Normalize path - remove /api prefix if present
+  const normalizedPath = urlPath.replace(/^\/api/, "");
+  
+  // Check if it's one of the specific endpoints that should only send token if user is logged in
+  // 1. /investment-opportunities/dropdown
+  // 2. /investment-opportunities (base endpoint)
+  const isDropdown = normalizedPath === "/investment-opportunities/dropdown";
+  const isBaseEndpoint = normalizedPath === "/investment-opportunities";
+  
+  return isDropdown || isBaseEndpoint;
+};
+
 // Helper function to get auth token from cookies or localStorage
 const getAuthToken = (url: string, needsAdminToken: boolean): string | null => {
   if (typeof document === "undefined") return null;
@@ -137,12 +206,45 @@ const getAuthToken = (url: string, needsAdminToken: boolean): string | null => {
 // Request interceptor: add auth token to headers
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get the full URL (baseURL + url)
-    const fullUrl = config.url ? `${config.baseURL || ""}${config.url}` : config.baseURL || "";
+    // Get the URL to check - prefer config.url (relative path) for endpoint matching
+    // If config.url is empty or relative, construct full URL from baseURL + url
+    const relativeUrl = config.url || "";
+    let fullUrl = relativeUrl;
+    if (config.baseURL && !relativeUrl.startsWith("http://") && !relativeUrl.startsWith("https://")) {
+      // Construct full URL from baseURL + relative URL
+      const base = config.baseURL.endsWith("/") ? config.baseURL.slice(0, -1) : config.baseURL;
+      const url = relativeUrl.startsWith("/") ? relativeUrl : `/${relativeUrl}`;
+      fullUrl = `${base}${url}`;
+    }
+    
     const method = config.method?.toUpperCase();
     const needsAdminToken = isAdminEndpoint(fullUrl, method);
-    const token = getAuthToken(fullUrl, needsAdminToken);
     
+    // Check if this is one of the investment-opportunities endpoints that need conditional auth
+    // Check both relative URL and full URL to handle all cases
+    const isConditionalAuthEndpoint = 
+      isInvestmentOpportunitiesConditionalAuthEndpoint(relativeUrl) || 
+      isInvestmentOpportunitiesConditionalAuthEndpoint(fullUrl);
+    
+    let token: string | null = null;
+    
+    if (isConditionalAuthEndpoint && method === "GET") {
+      // For these specific endpoints, only send token if user is logged in
+      const userLoggedIn = isUserLoggedIn();
+      if (userLoggedIn) {
+        token = getAuthToken(fullUrl, needsAdminToken);
+      } else {
+        // Explicitly remove Authorization header if user is not logged in
+        if (config.headers) {
+          delete config.headers.Authorization;
+        }
+      }
+    } else {
+      // For all other endpoints, use existing logic
+      token = getAuthToken(fullUrl, needsAdminToken);
+    }
+    
+    // Add Authorization header only if token exists
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -151,7 +253,10 @@ axiosInstance.interceptors.request.use(
     if (process.env.NODE_ENV === "development") {
       console.log(`[API Request] ${method} ${fullUrl}`, {
         isAdmin: needsAdminToken,
+        isConditionalAuth: isConditionalAuthEndpoint,
+        userLoggedIn: isConditionalAuthEndpoint ? isUserLoggedIn() : undefined,
         tokenType: needsAdminToken ? "admin_token" : "auth_token",
+        hasToken: !!token,
         headers: config.headers,
         data: config.data,
       });
