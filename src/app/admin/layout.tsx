@@ -21,6 +21,7 @@ import {
   UserCircle,
   ChevronRight,
   Home,
+  TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Issuances", href: "/admin/issuances", icon: FileText },
+  { name: "Investment Opportunities", href: "/admin/investment-opportunities", icon: TrendingUp },
   { name: "Projects", href: "/admin/projects", icon: Building2 },
   { name: "Blog/News", href: "/admin/posts", icon: Newspaper },
   { name: "Webinars", href: "/admin/webinars", icon: Video },

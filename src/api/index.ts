@@ -1,6 +1,7 @@
 // Export all API classes
 export * from "./auth.api";
 export * from "./investment.api";
+export * from "./investment-opportunities.api";
 export * from "./issuance.api";
 export * from "./project.api";
 export * from "./admin.api";

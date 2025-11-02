@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { addInvestment } from "@/store/slices/investments";
-import { issuances } from "@/data/issuances";
+import { useInvestmentOpportunitiesDropdown } from "@/hooks/swr/useInvestmentOpportunities";
 import { CheckCircle2 } from "lucide-react";
 
 const paymentMethodOptions = [
@@ -32,13 +32,30 @@ export function SubscriptionModal() {
   const dispatch = useAppDispatch();
   const [confirm, setConfirm] = useState(false);
   
-  // Generate issuance options from actual data
-  const issuanceOptions = issuances
-    .filter(iss => iss.status === "open")
-    .map(iss => ({
-      label: iss.title,
-      value: iss.title,
+  // Fetch investment opportunities for dropdown
+  // Note: API only accepts single status value, so we fetch all (no status filter)
+  // Backend should return active, upcoming, and paused by default
+  const { opportunities, isLoading: isLoadingOpportunities } = useInvestmentOpportunitiesDropdown();
+  
+  // Filter out closed opportunities on the client side
+  const availableOpportunities = opportunities.filter(opp => {
+    // Since dropdown API only returns id and title, we can't filter by status client-side
+    // We'll rely on the backend to return appropriate opportunities
+    return true; // Show all opportunities returned by API
+  });
+
+  // Generate dropdown options from API data
+  const issuanceOptions = useMemo(() => {
+    if (!availableOpportunities || availableOpportunities.length === 0) {
+      return [];
+    }
+
+    // Map to dropdown options (already sorted by API)
+    return availableOpportunities.map(opp => ({
+      label: opp.title,
+      value: opp.id,
     }));
+  }, [availableOpportunities]);
 
   const formik = useFormik({
     initialValues: {
@@ -99,7 +116,13 @@ export function SubscriptionModal() {
             <form onSubmit={formik.handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label className="text-zinc-300">Investment Opportunity</Label>
-                {issuanceOptions.length > 0 ? (
+                {isLoadingOpportunities ? (
+                  <Input 
+                    value="Loading opportunities..." 
+                    disabled
+                    className="bg-zinc-800/50 border-zinc-700 text-white"
+                  />
+                ) : issuanceOptions.length > 0 ? (
                   <>
                     <Select 
                       options={issuanceOptions} 
@@ -113,7 +136,7 @@ export function SubscriptionModal() {
                   </>
                 ) : (
                   <Input 
-                    value={formik.values.issuance} 
+                    value="No opportunities available" 
                     disabled
                     className="bg-zinc-800/50 border-zinc-700 text-white"
                   />

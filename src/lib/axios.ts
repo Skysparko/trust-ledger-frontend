@@ -29,30 +29,106 @@ export const axiosInstance: AxiosInstance = axios.create({
   },
 });
 
-// Helper function to get auth token from cookies
-const getAuthToken = (): string | null => {
-  if (typeof document === "undefined") return null;
+// Helper function to check if URL is an admin endpoint (needs admin token)
+const isAdminEndpoint = (url: string, method?: string): boolean => {
+  if (!url) return false;
   
-  // First, check cookies (priority)
-  const cookies = document.cookie.split(";");
-  for (let cookie of cookies) {
-    const [name, value] = cookie.trim().split("=");
-    if (name === "auth_token" || name === "token") {
-      const tokenValue = decodeURIComponent(value);
-      if (tokenValue && tokenValue !== "undefined" && tokenValue !== "null") {
-        return tokenValue;
-      }
-    }
-  }
-  
-  // Fallback: check localStorage for token
+  // Extract path from URL (handles both absolute and relative URLs)
+  let urlPath = url;
   try {
-    const token = localStorage.getItem("auth_token");
-    if (token && token !== "undefined" && token !== "null") {
-      return token;
+    if (url.includes("://")) {
+      // Absolute URL
+      urlPath = new URL(url).pathname;
+    } else {
+      // Relative URL - extract path part (before query string)
+      urlPath = url.split("?")[0];
     }
   } catch {
-    // Ignore parsing errors
+    // If URL parsing fails, use the original string
+    urlPath = url.split("?")[0];
+  }
+  
+  // Admin API endpoints that require admin token
+  // For investment-opportunities: GET requests can use regular user token, POST/PUT/DELETE need admin token
+  const isInvestmentOpportunities = urlPath.includes("/investment-opportunities");
+  if (isInvestmentOpportunities) {
+    // Only POST, PUT, DELETE need admin token (super admin)
+    // GET requests can use regular user token
+    const isReadOnly = method === "GET" || !method || method === "get";
+    return !isReadOnly; // Returns true only for write operations
+  }
+  
+  // Other admin endpoints always need admin token
+  return (
+    urlPath.startsWith("/admin/") ||
+    urlPath.startsWith("/api/admin/") ||
+    urlPath.includes("/admin/")
+  );
+};
+
+// Helper function to get auth token from cookies or localStorage
+const getAuthToken = (url: string, needsAdminToken: boolean): string | null => {
+  if (typeof document === "undefined") return null;
+  
+  // For admin endpoints, prioritize admin_token
+  if (needsAdminToken) {
+    // First, check admin_token in cookies
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split("=");
+      if (name === "admin_token") {
+        const tokenValue = decodeURIComponent(value);
+        if (tokenValue && tokenValue !== "undefined" && tokenValue !== "null") {
+          return tokenValue;
+        }
+      }
+    }
+    
+    // Check admin token in localStorage (admin_user)
+    try {
+      const adminUser = localStorage.getItem("admin_user");
+      if (adminUser) {
+        const parsed = JSON.parse(adminUser);
+        if (parsed?.token && parsed.token !== "undefined" && parsed.token !== "null") {
+          return parsed.token;
+        }
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+    
+    // Check admin_token in localStorage
+    try {
+      const token = localStorage.getItem("admin_token");
+      if (token && token !== "undefined" && token !== "null") {
+        return token;
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+  } else {
+    // For regular user endpoints, use auth_token
+    // First, check auth_token in cookies
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split("=");
+      if (name === "auth_token" || name === "token") {
+        const tokenValue = decodeURIComponent(value);
+        if (tokenValue && tokenValue !== "undefined" && tokenValue !== "null") {
+          return tokenValue;
+        }
+      }
+    }
+    
+    // Check auth_token in localStorage
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (token && token !== "undefined" && token !== "null") {
+        return token;
+      }
+    } catch {
+      // Ignore parsing errors
+    }
   }
   
   return null;
@@ -61,7 +137,11 @@ const getAuthToken = (): string | null => {
 // Request interceptor: add auth token to headers
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = getAuthToken();
+    // Get the full URL (baseURL + url)
+    const fullUrl = config.url ? `${config.baseURL || ""}${config.url}` : config.baseURL || "";
+    const method = config.method?.toUpperCase();
+    const needsAdminToken = isAdminEndpoint(fullUrl, method);
+    const token = getAuthToken(fullUrl, needsAdminToken);
     
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -69,7 +149,9 @@ axiosInstance.interceptors.request.use(
     
     // Debug logging in development
     if (process.env.NODE_ENV === "development") {
-      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
+      console.log(`[API Request] ${method} ${fullUrl}`, {
+        isAdmin: needsAdminToken,
+        tokenType: needsAdminToken ? "admin_token" : "auth_token",
         headers: config.headers,
         data: config.data,
       });

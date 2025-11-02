@@ -1,14 +1,98 @@
 "use client";
 
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { issuances } from "@/data/issuances";
-import { Building2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useInvestmentOpportunities, useAllInvestmentOpportunitiesForDropdowns, useInvestmentOpportunitiesDropdown } from "@/hooks/swr/useInvestmentOpportunities";
+import { InvestmentOpportunityCard } from "@/components/cards/InvestmentOpportunityCard";
+import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
+import { staggerContainer } from "@/lib/motion";
 
 export default function IssuesPage() {
-  const openOpportunities = issuances.filter(iss => iss.status === "open");
+  const [status, setStatus] = useState<string>("all");
+  const [sector, setSector] = useState<string>("all");
+  const [riskLevel, setRiskLevel] = useState<string>("all");
+  const [location, setLocation] = useState<string>("all");
+  const [type, setType] = useState<string>("all");
+  const [selectedOpportunity, setSelectedOpportunity] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch unique values for dropdowns
+  const {
+    uniqueSectors,
+    uniqueTypes,
+    uniqueLocations,
+    uniqueStatuses,
+    uniqueRiskLevels,
+  } = useAllInvestmentOpportunitiesForDropdowns();
+
+  // Build dropdown API filters (only include status if selected)
+  const dropdownFilters = useMemo(() => {
+    const filters: any = {};
+    
+    // Only add status if it's not "all"
+    if (status !== "all") {
+      filters.status = status;
+    }
+    
+    // Don't send filters to dropdown API if none are selected
+    return Object.keys(filters).length > 0 ? filters : undefined;
+  }, [status]);
+
+  // Fetch opportunities for dropdown based on status filter
+  const { opportunities: dropdownOpportunities, isLoading: isLoadingDropdown } = useInvestmentOpportunitiesDropdown(dropdownFilters);
+
+  // Get selected opportunity title for filtering
+  const selectedOpportunityTitle = useMemo(() => {
+    if (selectedOpportunity === "all") return null;
+    const opp = dropdownOpportunities.find(o => o.id === selectedOpportunity);
+    return opp?.title || null;
+  }, [selectedOpportunity, dropdownOpportunities]);
+
+  // Build API filters (only include selected filters, exclude "all" values)
+  const apiFilters = useMemo(() => {
+    const filters: any = {
+      page: currentPage,
+      limit: 12,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    };
+    
+    if (status !== "all") filters.status = status;
+    if (sector !== "all") filters.sector = sector;
+    if (riskLevel !== "all") filters.riskLevel = riskLevel;
+    if (location !== "all") filters.location = location;
+    if (type !== "all") filters.type = type;
+    
+    // Combine search query and selected opportunity title
+    const searchTerms: string[] = [];
+    if (searchQuery.trim()) searchTerms.push(searchQuery.trim());
+    if (selectedOpportunityTitle) searchTerms.push(selectedOpportunityTitle);
+    if (searchTerms.length > 0) {
+      filters.search = searchTerms.join(" ");
+    }
+    
+    return filters;
+  }, [status, sector, riskLevel, location, type, selectedOpportunityTitle, searchQuery, currentPage]);
   
+  // Fetch investment opportunities from API with filters
+  const { opportunities, pagination, isLoading, isError, error } = useInvestmentOpportunities(apiFilters);
+  
+  // Debug logging
+  if (typeof window !== "undefined") {
+    console.log("[Investment Opportunities] API Response:", {
+      opportunities,
+      pagination,
+      isLoading,
+      isError,
+      error,
+      count: opportunities?.length,
+    });
+  }
+  
+  const totalPages = pagination?.totalPages || 1;
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
@@ -20,79 +104,165 @@ export default function IssuesPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {openOpportunities.map((issuance, index) => (
-          <motion.div
-            key={issuance.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-          >
-            <Link href={`/portal/issues/${issuance.id}`}>
-              <Card className="group h-full cursor-pointer border-zinc-800 bg-zinc-900/50 backdrop-blur-sm shadow-xl transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-900/70 hover:shadow-2xl hover:shadow-blue-500/10 dark:border-zinc-800 dark:bg-zinc-900/50">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="mb-2 flex items-center gap-2">
-                        <Building2 className="h-5 w-5 text-blue-400" />
-                        <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">
-                          {issuance.type}
-                        </span>
-                      </div>
-                      <CardTitle className="text-xl font-bold text-white">{issuance.title}</CardTitle>
-                      <p className="mt-1 text-sm text-zinc-400">{issuance.location}</p>
-                    </div>
-                    <div className="rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 px-3 py-1.5">
-                      <div className="text-lg font-bold text-blue-400">{issuance.rate}%</div>
-                      <div className="text-[10px] uppercase tracking-wider text-zinc-400">Rate</div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4 border-t border-zinc-800/50 pt-4">
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Rate
-                      </div>
-                      <div className="mt-1 text-lg font-bold text-white">{issuance.rate}%</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Term
-                      </div>
-                      <div className="mt-1 text-lg font-bold text-white">{issuance.termMonths} mo</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Min
-                      </div>
-                      <div className="mt-1 text-lg font-bold text-white">€{issuance.minInvestment}</div>
-                    </div>
-                  </div>
-                  <div className="pt-2 border-t border-zinc-800/50">
-                    <div className="flex items-center justify-between text-xs mb-2">
-                      <span className="text-zinc-500">Funding Progress</span>
-                      <span className="font-semibold text-white">
-                        {Math.round((issuance.currentFunding / issuance.totalFundingTarget) * 100)}%
-                      </span>
-                    </div>
-                    <div className="relative h-2 overflow-hidden rounded-full bg-zinc-800/50">
-                      <div 
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
-                        style={{ width: `${(issuance.currentFunding / issuance.totalFundingTarget) * 100}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between mt-2 text-xs text-zinc-400">
-                      <span>€{(issuance.currentFunding / 1000).toFixed(0)}k / €{(issuance.totalFundingTarget / 1000).toFixed(0)}k</span>
-                      <span>{issuance.investorsCount} investors</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </motion.div>
-        ))}
+      {/* Search */}
+      <div className="mb-6">
+        <Input
+          placeholder="Search opportunities by title, company, or sector..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="max-w-md bg-zinc-900/50 border-zinc-700 text-white placeholder:text-zinc-500"
+        />
       </div>
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 mb-8">
+        <Select
+          options={[
+            { label: "All opportunities", value: "all" },
+            ...(isLoadingDropdown 
+              ? [{ label: "Loading...", value: "loading", disabled: true }]
+              : dropdownOpportunities.map((opp) => ({
+                  label: opp.title,
+                  value: opp.id,
+                }))
+            ),
+          ]}
+          value={selectedOpportunity}
+          onValueChange={(value) => {
+            setSelectedOpportunity(value);
+            setCurrentPage(1);
+          }}
+          className="bg-zinc-900/50 border-zinc-700 text-white"
+        />
+        <Select
+          options={[
+            { label: "All statuses", value: "all" },
+            ...(uniqueStatuses.length > 0
+              ? uniqueStatuses.map((s) => ({
+                  label: s.charAt(0).toUpperCase() + s.slice(1),
+                  value: s,
+                }))
+              : [
+                  { label: "Active", value: "active" },
+                  { label: "Upcoming", value: "upcoming" },
+                  { label: "Closed", value: "closed" },
+                  { label: "Paused", value: "paused" },
+                ]),
+          ]}
+          value={status}
+          onValueChange={(value) => {
+            setStatus(value);
+            setCurrentPage(1);
+          }}
+          className="bg-zinc-900/50 border-zinc-700 text-white"
+        />
+        <Select
+          options={[
+            { label: "All sectors", value: "all" },
+            ...uniqueSectors.map((s) => ({ label: s, value: s })),
+          ]}
+          value={sector}
+          onValueChange={(value) => {
+            setSector(value);
+            setCurrentPage(1);
+          }}
+          className="bg-zinc-900/50 border-zinc-700 text-white"
+        />
+        <Select
+          options={[
+            { label: "All risk levels", value: "all" },
+            ...(uniqueRiskLevels.length > 0
+              ? uniqueRiskLevels.map((r) => ({ label: r, value: r }))
+              : [
+                  { label: "Low", value: "Low" },
+                  { label: "Medium", value: "Medium" },
+                  { label: "High", value: "High" },
+                ]),
+          ]}
+          value={riskLevel}
+          onValueChange={(value) => {
+            setRiskLevel(value);
+            setCurrentPage(1);
+          }}
+          className="bg-zinc-900/50 border-zinc-700 text-white"
+        />
+        <Select
+          options={[
+            { label: "All locations", value: "all" },
+            ...uniqueLocations.map((l) => ({ label: l, value: l })),
+          ]}
+          value={location}
+          onValueChange={(value) => {
+            setLocation(value);
+            setCurrentPage(1);
+          }}
+          className="bg-zinc-900/50 border-zinc-700 text-white"
+        />
+        <Select
+          options={[
+            { label: "All types", value: "all" },
+            ...uniqueTypes.map((t) => ({ label: t, value: t })),
+          ]}
+          value={type}
+          onValueChange={(value) => {
+            setType(value);
+            setCurrentPage(1);
+          }}
+          className="bg-zinc-900/50 border-zinc-700 text-white"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-12 text-zinc-500">Loading investment opportunities...</div>
+      ) : isError ? (
+        <div className="text-center py-12 text-red-400">
+          <p>Error loading investment opportunities</p>
+          <p className="text-sm text-zinc-500 mt-2">{error?.message || "Please try again later"}</p>
+        </div>
+      ) : opportunities.length === 0 ? (
+        <div className="text-center py-12 text-zinc-500">
+          No investment opportunities available at the moment.
+        </div>
+      ) : (
+        <>
+          <motion.div
+            variants={staggerContainer(0.08)}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+          >
+            {opportunities.map((opportunity) => (
+              <InvestmentOpportunityCard key={opportunity.id} opportunity={opportunity} />
+            ))}
+          </motion.div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-zinc-400">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

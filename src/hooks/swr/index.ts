@@ -7,4 +7,5 @@ export * from "./useProfile";
 export * from "./useAdmin";
 export * from "./usePublic";
 export * from "./useUser";
+export * from "./useInvestmentOpportunities";
 

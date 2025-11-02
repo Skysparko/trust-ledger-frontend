@@ -1,6 +1,7 @@
 import { Fetcher } from "swr";
 import { AuthApi } from "@/api/auth.api";
 import { InvestmentApi } from "@/api/investment.api";
+import { InvestmentOpportunitiesApi } from "@/api/investment-opportunities.api";
 import { IssuanceApi } from "@/api/issuance.api";
 import { ProjectApi } from "@/api/project.api";
 import { AdminApi } from "@/api/admin.api";
@@ -37,6 +38,15 @@ export const SwrKeys = {
   projects: {
     all: (filters?: any) => ["/projects", filters],
     detail: (id: string) => `/projects/${id}`,
+  },
+
+  // Investment Opportunities
+  investmentOpportunities: {
+    all: (filters?: any) => ["/investment-opportunities", filters],
+    detail: (id: string) => `/investment-opportunities/${id}`,
+    featured: (limit?: number) => limit ? ["/investment-opportunities/featured", { limit }] : "/investment-opportunities/featured",
+    upcoming: () => "/investment-opportunities/upcoming",
+    dropdown: (filters?: any) => ["/investment-opportunities/dropdown", filters],
   },
 
   // Profile
@@ -118,6 +128,31 @@ export const projectFetchers = {
     const id = key.split("/").pop() || "";
     return ProjectApi.getProject(id);
   }) as Fetcher<any, string>,
+};
+
+// Investment Opportunities fetchers
+export const investmentOpportunityFetchers = {
+  all: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return InvestmentOpportunitiesApi.getInvestmentOpportunities(filters);
+  }) as Fetcher<any, string | [string, any?]>,
+  detail: ((key: string) => {
+    const id = key.split("/").pop() || "";
+    return InvestmentOpportunitiesApi.getInvestmentOpportunity(id);
+  }) as Fetcher<any, string>,
+  featured: ((key: string | [string, any?]) => {
+    if (Array.isArray(key)) {
+      const [, filters] = key;
+      const limit = filters?.limit;
+      return InvestmentOpportunitiesApi.getFeaturedOpportunities(limit);
+    }
+    return InvestmentOpportunitiesApi.getFeaturedOpportunities();
+  }) as Fetcher<any, string | [string, any?]>,
+  upcoming: ((key: string) => InvestmentOpportunitiesApi.getUpcomingOpportunities()) as Fetcher<any, string>,
+  dropdown: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return InvestmentOpportunitiesApi.getInvestmentOpportunitiesDropdown(filters);
+  }) as Fetcher<any, string | [string, any?]>,
 };
 
 // Profile fetchers
@@ -213,6 +248,23 @@ export const swrFetcher: Fetcher<any, string | [string, any?]> = async (key: str
       return projectFetchers.detail(endpoint);
     }
     return (projectFetchers.all as any)([endpoint, filters]);
+  }
+
+  // Investment Opportunities endpoints
+  if (endpoint === "/investment-opportunities" || endpoint.startsWith("/investment-opportunities/")) {
+    if (endpoint === "/investment-opportunities/dropdown") {
+      return (investmentOpportunityFetchers.dropdown as any)(Array.isArray(key) ? key : [endpoint, filters]);
+    }
+    if (endpoint === "/investment-opportunities/featured" || endpoint.includes("/investment-opportunities/featured")) {
+      return (investmentOpportunityFetchers.featured as any)(Array.isArray(key) ? key : [endpoint, filters]);
+    }
+    if (endpoint === "/investment-opportunities/upcoming") {
+      return investmentOpportunityFetchers.upcoming(endpoint);
+    }
+    if (endpoint.startsWith("/investment-opportunities/") && endpoint !== "/investment-opportunities") {
+      return investmentOpportunityFetchers.detail(endpoint);
+    }
+    return (investmentOpportunityFetchers.all as any)([endpoint, filters]);
   }
 
   // Profile endpoints
