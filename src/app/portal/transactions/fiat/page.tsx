@@ -1,83 +1,10 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const dummyTransactions = [
-  {
-    id: 1,
-    date: "2024-05-20",
-    type: "Deposit",
-    amount: 10000,
-    currency: "EUR",
-    status: "completed",
-    reference: "TXN-2024-001234"
-  },
-  {
-    id: 2,
-    date: "2024-05-18",
-    type: "Investment",
-    amount: -5000,
-    currency: "EUR",
-    status: "completed",
-    reference: "TXN-2024-001189"
-  },
-  {
-    id: 3,
-    date: "2024-05-15",
-    type: "Withdrawal",
-    amount: -2000,
-    currency: "EUR",
-    status: "pending",
-    reference: "TXN-2024-001156"
-  },
-  {
-    id: 4,
-    date: "2024-05-12",
-    type: "Deposit",
-    amount: 15000,
-    currency: "EUR",
-    status: "completed",
-    reference: "TXN-2024-001098"
-  },
-  {
-    id: 5,
-    date: "2024-05-10",
-    type: "Investment",
-    amount: -8000,
-    currency: "EUR",
-    status: "completed",
-    reference: "TXN-2024-001067"
-  },
-  {
-    id: 6,
-    date: "2024-05-08",
-    type: "Deposit",
-    amount: 5000,
-    currency: "EUR",
-    status: "completed",
-    reference: "TXN-2024-001045"
-  },
-  {
-    id: 7,
-    date: "2024-05-05",
-    type: "Investment",
-    amount: -3000,
-    currency: "EUR",
-    status: "completed",
-    reference: "TXN-2024-001023"
-  },
-  {
-    id: 8,
-    date: "2024-05-02",
-    type: "Deposit",
-    amount: 12000,
-    currency: "EUR",
-    status: "completed",
-    reference: "TXN-2024-000987"
-  }
-];
+import { useUserTransactions } from "@/hooks/swr/useUser";
 
 export default function TransactionsFiatPage() {
+  const { transactions, isLoading, isError, error } = useUserTransactions();
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -116,47 +43,69 @@ export default function TransactionsFiatPage() {
                 </tr>
               </thead>
               <tbody>
-                {dummyTransactions.map((transaction) => (
-                  <tr 
-                    key={transaction.id}
-                    className="border-b border-zinc-800/30 last:border-0 transition-colors hover:bg-zinc-800/20"
-                  >
-                    <td className="px-6 py-4 text-zinc-400">
-                      {new Date(transaction.date).toLocaleDateString("en-US", {
-                        month: "2-digit",
-                        day: "2-digit",
-                        year: "numeric",
-                      })}
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-16 text-center">
+                      <div className="text-zinc-500">Loading transactions...</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={
-                        transaction.type === "Deposit"
-                          ? "inline-flex items-center rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400"
-                          : transaction.type === "Investment"
-                          ? "inline-flex items-center rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-400"
-                          : "inline-flex items-center rounded-full bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-400"
-                      }>
-                        {transaction.type}
-                      </span>
-                    </td>
-                    <td className={`px-6 py-4 font-semibold ${transaction.amount >= 0 ? "text-green-400" : "text-red-400"}`}>
-                      {transaction.amount >= 0 ? "+" : ""}€ {Math.abs(transaction.amount).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-zinc-400">{transaction.currency}</td>
-                    <td className="px-6 py-4">
-                      <span className={
-                        transaction.status === "completed"
-                          ? "inline-flex items-center rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400"
-                          : transaction.status === "pending"
-                          ? "inline-flex items-center rounded-full bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-400"
-                          : "inline-flex items-center rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400"
-                      }>
-                        {transaction.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-xs text-zinc-400">{transaction.reference}</td>
                   </tr>
-                ))}
+                ) : isError ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-16 text-center">
+                      <div className="text-red-400">Error loading transactions: {error?.message || "Unknown error"}</div>
+                    </td>
+                  </tr>
+                ) : !transactions || transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-16 text-center">
+                      <div className="text-zinc-500">No transactions found</div>
+                    </td>
+                  </tr>
+                ) : (
+                  transactions.map((transaction) => (
+                    <tr 
+                      key={transaction.id}
+                      className="border-b border-zinc-800/30 last:border-0 transition-colors hover:bg-zinc-800/20"
+                    >
+                      <td className="px-6 py-4 text-zinc-400">
+                        {new Date(transaction.createdAt).toLocaleDateString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={
+                          transaction.type === "deposit"
+                            ? "inline-flex items-center rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400"
+                            : transaction.type === "investment"
+                            ? "inline-flex items-center rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-400"
+                            : transaction.type === "withdrawal"
+                            ? "inline-flex items-center rounded-full bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-400"
+                            : "inline-flex items-center rounded-full bg-purple-500/20 px-3 py-1 text-xs font-medium text-purple-400"
+                        }>
+                          {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                        </span>
+                      </td>
+                      <td className={`px-6 py-4 font-semibold ${transaction.type === "deposit" || transaction.type === "refund" ? "text-green-400" : "text-red-400"}`}>
+                        {transaction.type === "deposit" || transaction.type === "refund" ? "+" : "-"}€ {Math.abs(transaction.amount).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-zinc-400">{transaction.currency}</td>
+                      <td className="px-6 py-4">
+                        <span className={
+                          transaction.status === "confirmed"
+                            ? "inline-flex items-center rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400"
+                            : transaction.status === "pending"
+                            ? "inline-flex items-center rounded-full bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-400"
+                            : "inline-flex items-center rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400"
+                        }>
+                          {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 font-mono text-xs text-zinc-400">{transaction.id}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

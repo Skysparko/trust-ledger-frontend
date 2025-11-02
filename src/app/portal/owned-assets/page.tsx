@@ -1,52 +1,12 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const dummyAssets = [
-  {
-    id: 1,
-    name: "Tech Innovation Fund #2024-001",
-    type: "Technology Bond",
-    quantity: 150,
-    value: 22500,
-    dateAcquired: "2024-01-15"
-  },
-  {
-    id: 2,
-    name: "Healthcare Expansion #2024-003",
-    type: "Healthcare Bond",
-    quantity: 85,
-    value: 12750,
-    dateAcquired: "2024-02-20"
-  },
-  {
-    id: 3,
-    name: "Corporate Bond #GB-2024-045",
-    type: "Bond",
-    quantity: 50,
-    value: 50000,
-    dateAcquired: "2024-03-10"
-  },
-  {
-    id: 4,
-    name: "Energy Portfolio #2024-007",
-    type: "Energy Bond",
-    quantity: 200,
-    value: 30000,
-    dateAcquired: "2024-04-05"
-  },
-  {
-    id: 5,
-    name: "Carbon Credit Certificate #CC-2024-112",
-    type: "Certificate",
-    quantity: 120,
-    value: 18000,
-    dateAcquired: "2024-05-12"
-  }
-];
+import { useUserAssets } from "@/hooks/swr/useUser";
 
 export default function OwnedAssetsPage() {
-  const totalValue = dummyAssets.reduce((sum, asset) => sum + asset.value, 0);
+  const { assets, isLoading, isError, error } = useUserAssets();
+
+  const totalValue = assets?.reduce((sum, asset) => sum + asset.totalValue, 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -94,24 +54,44 @@ export default function OwnedAssetsPage() {
                 </tr>
               </thead>
               <tbody>
-                {dummyAssets.map((asset) => (
-                  <tr 
-                    key={asset.id}
-                    className="border-b border-zinc-800/30 last:border-0 transition-colors hover:bg-zinc-800/20"
-                  >
-                    <td className="px-6 py-4 font-medium text-white">{asset.name}</td>
-                    <td className="px-6 py-4 text-zinc-400">{asset.type}</td>
-                    <td className="px-6 py-4 font-semibold text-white">{asset.quantity.toLocaleString()}</td>
-                    <td className="px-6 py-4 font-semibold text-white">€ {asset.value.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-zinc-400">
-                      {new Date(asset.dateAcquired).toLocaleDateString("en-US", {
-                        month: "2-digit",
-                        day: "2-digit",
-                        year: "numeric",
-                      })}
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center">
+                      <div className="text-zinc-500">Loading assets...</div>
                     </td>
                   </tr>
-                ))}
+                ) : isError ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center">
+                      <div className="text-red-400">Error loading assets: {error?.message || "Unknown error"}</div>
+                    </td>
+                  </tr>
+                ) : !assets || assets.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center">
+                      <div className="text-zinc-500">No assets found</div>
+                    </td>
+                  </tr>
+                ) : (
+                  assets.map((asset) => (
+                    <tr 
+                      key={asset.id}
+                      className="border-b border-zinc-800/30 last:border-0 transition-colors hover:bg-zinc-800/20"
+                    >
+                      <td className="px-6 py-4 font-medium text-white">{asset.issuanceName}</td>
+                      <td className="px-6 py-4 text-zinc-400">Bond</td>
+                      <td className="px-6 py-4 font-semibold text-white">{asset.bonds.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-semibold text-white">€ {asset.totalValue.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-zinc-400">
+                        {new Date(asset.purchaseDate).toLocaleDateString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                        })}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

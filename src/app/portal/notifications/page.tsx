@@ -1,13 +1,21 @@
 "use client";
 
-import { useAppDispatch, useAppSelector } from "@/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { markAllRead } from "@/store/slices/notifications";
+import { useUserNotifications, useMarkAllNotificationsAsRead } from "@/hooks/swr/useUser";
 
 export default function NotificationsPage() {
-  const notifications = useAppSelector((s) => s.notifications.items);
-  const dispatch = useAppDispatch();
+  const { notifications, isLoading, isError, error, mutate } = useUserNotifications();
+  const { markAllAsRead, isUpdating } = useMarkAllNotificationsAsRead();
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllAsRead();
+      mutate(); // Refresh notifications
+    } catch (err) {
+      console.error("Failed to mark all notifications as read:", err);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -15,11 +23,12 @@ export default function NotificationsPage() {
         <h1 className="text-3xl font-bold tracking-tight text-white">Notifications</h1>
         <Button 
           variant="outline" 
-          onClick={() => dispatch(markAllRead())}
+          onClick={handleMarkAllRead}
+          disabled={isUpdating || isLoading || !notifications || notifications.length === 0}
           className="border-zinc-700 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800/50 hover:text-white dark:border-zinc-700 dark:text-zinc-300"
           size="sm"
         >
-          Mark all read
+          {isUpdating ? "Updating..." : "Mark all read"}
         </Button>
       </div>
       <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm shadow-xl dark:border-zinc-800 dark:bg-zinc-900/50">
@@ -29,7 +38,13 @@ export default function NotificationsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {notifications.length === 0 ? (
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">Loading notifications...</p>
+          ) : isError ? (
+            <p className="py-8 text-center text-sm text-red-400">
+              Error loading notifications: {error?.message || "Unknown error"}
+            </p>
+          ) : !notifications || notifications.length === 0 ? (
             <p className="py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">No notifications yet.</p>
           ) : (
             <ul className="space-y-3">
@@ -41,7 +56,7 @@ export default function NotificationsPage() {
                   <div className="flex-1">
                     <div className="text-sm font-semibold text-white">{n.title}</div>
                     <div className="mt-1 text-sm text-zinc-400">{n.message}</div>
-                    <div className="mt-2 text-xs text-zinc-500">{new Date(n.date).toLocaleString()}</div>
+                    <div className="mt-2 text-xs text-zinc-500">{new Date(n.createdAt).toLocaleString()}</div>
                   </div>
                   {!n.read && (
                     <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-500" />

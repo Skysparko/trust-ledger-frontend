@@ -6,6 +6,7 @@ import { ProjectApi } from "@/api/project.api";
 import { AdminApi } from "@/api/admin.api";
 import { ProfileApi } from "@/api/profile.api";
 import { PublicApi } from "@/api/public.api";
+import { UserApi } from "@/api/user.api";
 
 /**
  * SWR Key Patterns
@@ -58,6 +59,15 @@ export const SwrKeys = {
     posts: (filters?: any) => ["/posts", filters],
     post: (id: string) => `/posts/${id}`,
     webinars: () => "/webinars",
+  },
+
+  // User
+  user: {
+    profile: () => "/user/profile",
+    investments: () => "/user/investments",
+    transactions: (filters?: any) => ["/user/transactions", filters],
+    assets: () => "/user/assets",
+    notifications: () => "/user/notifications",
   },
 } as const;
 
@@ -153,6 +163,18 @@ export const publicFetchers = {
   webinars: ((key: string) => PublicApi.getWebinars()) as Fetcher<any, string>,
 };
 
+// User fetchers
+export const userFetchers = {
+  profile: ((key: string) => UserApi.getProfile()) as Fetcher<any, string>,
+  investments: ((key: string) => UserApi.getInvestments()) as Fetcher<any, string>,
+  transactions: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return UserApi.getTransactions(filters);
+  }) as Fetcher<any, string | [string, any?]>,
+  assets: ((key: string) => UserApi.getAssets()) as Fetcher<any, string>,
+  notifications: ((key: string) => UserApi.getNotifications()) as Fetcher<any, string>,
+};
+
 /**
  * Generic SWR fetcher
  * Automatically determines which fetcher to use based on the key
@@ -230,6 +252,23 @@ export const swrFetcher: Fetcher<any, string | [string, any?]> = async (key: str
 
   if (endpoint === "/webinars") {
     return publicFetchers.webinars(endpoint);
+  }
+
+  // User endpoints
+  if (endpoint === "/user/profile") {
+    return userFetchers.profile(endpoint);
+  }
+  if (endpoint === "/user/investments") {
+    return userFetchers.investments(endpoint);
+  }
+  if (endpoint === "/user/transactions") {
+    return (userFetchers.transactions as any)([endpoint, filters]);
+  }
+  if (endpoint === "/user/assets") {
+    return userFetchers.assets(endpoint);
+  }
+  if (endpoint === "/user/notifications") {
+    return userFetchers.notifications(endpoint);
   }
 
   throw new Error(`Unknown SWR key: ${endpoint}`);

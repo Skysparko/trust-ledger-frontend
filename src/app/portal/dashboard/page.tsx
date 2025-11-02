@@ -6,21 +6,20 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { setInvestments } from "@/store/slices/investments";
 import { setAgreementSigned, hydrateFromAuth } from "@/store/slices/profile";
 import { hydrateFromStorage } from "@/store/slices/auth";
-import { getInvestments } from "@/lib/mockApi";
 import { openSubscription } from "@/store/slices/ui";
+import { useUserInvestments } from "@/hooks/swr/useUser";
 import { SubscriptionModal } from "@/components/portal/SubscriptionModal";
 import { CheckCircle2, XCircle, FileText, UserCheck, Shield, ArrowRight } from "lucide-react";
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const investments = useAppSelector((s) => s.investments.items);
   const user = useAppSelector((s) => s.auth.user);
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const profile = useAppSelector((s) => s.profile);
+  const { investments: apiInvestments, isLoading: investmentsLoading, isError: investmentsError } = useUserInvestments();
 
   useEffect(() => {
     dispatch(hydrateFromStorage());
@@ -49,11 +48,19 @@ export default function DashboardPage() {
     }
   }, [user, dispatch]);
 
-  useEffect(() => {
-    if (investments.length === 0) {
-      getInvestments().then((data) => dispatch(setInvestments(data as any)));
-    }
-  }, [dispatch, investments.length]);
+  // Map API investments to the format expected by the component
+  const investments = useMemo(() => {
+    if (!apiInvestments) return [];
+    return apiInvestments.map((inv) => ({
+      id: inv.id,
+      issuance: `Issuance ${inv.issuanceId}`,
+      date: inv.createdAt,
+      amount: inv.amount,
+      bonds: inv.bonds,
+      status: inv.status,
+      documentUrl: undefined,
+    }));
+  }, [apiInvestments]);
 
   const total = useMemo(
     () => investments.filter((i) => i.status === "confirmed").reduce((sum, i) => sum + i.amount, 0),

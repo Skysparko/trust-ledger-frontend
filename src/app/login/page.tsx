@@ -47,12 +47,21 @@ export default function LoginPage() {
     validationSchema,
     onSubmit: async (values, { setSubmitting, setStatus }) => {
       try {
-        const user = await AuthApi.login({
+        const response = await AuthApi.login({
           email: values.email,
           password: values.password,
         });
-        dispatch(loginSuccess(user));
-        router.push("/portal/dashboard");
+        // Extract token from response (it might be in response.token or response.data.token)
+        const token = (response as any).token || (response as any).data?.token;
+        // Dispatch with token included
+        dispatch(loginSuccess({
+          ...response,
+          token,
+        }));
+        
+        // Use window.location.href instead of router.push to ensure cookies are sent
+        // This forces a full page reload, which ensures the middleware sees the cookie
+        window.location.href = "/portal/dashboard";
       } catch (err: any) {
         setStatus(err.message || "Login failed. Try again.");
       } finally {

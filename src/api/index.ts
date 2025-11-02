@@ -6,6 +6,7 @@ export * from "./project.api";
 export * from "./admin.api";
 export * from "./profile.api";
 export * from "./public.api";
+export * from "./user.api";
 export { BaseApi } from "./base.api";
 export type { ApiResponse, ApiError } from "./base.api";
 

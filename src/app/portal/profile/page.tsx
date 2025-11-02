@@ -11,6 +11,7 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { hydrateFromStorage } from "@/store/slices/auth";
 import { hydrateFromAuth, setKycDocument, setProfile } from "@/store/slices/profile";
 import { AuthApi } from "@/api/auth.api";
+import { useUserProfile, useUpdateUserProfile, useUploadKycDocument, useToggleTwoFactor, useUpdateWallet } from "@/hooks/swr/useUser";
 import { Lock, KeyRound, ShieldCheck, Wallet, Eye, EyeOff, Copy, Check } from "lucide-react";
 
 const profileValidationSchema = Yup.object({
@@ -54,14 +55,39 @@ export default function ProfilePage() {
   const auth = useAppSelector((s) => s.auth.user);
   const profile = useAppSelector((s) => s.profile);
   
-  // Two-factor auth state
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [enablingTwoFactor, setEnablingTwoFactor] = useState(false);
+  // Fetch profile from API
+  const { profile: apiProfile, isLoading: profileLoading, mutate: refreshProfile } = useUserProfile();
+  const { updateProfile, isUpdating } = useUpdateUserProfile();
+  const { uploadKycDocument, isUploading } = useUploadKycDocument();
+  const { toggleTwoFactor, isUpdating: isTogglingTwoFactor } = useToggleTwoFactor();
+  const { updateWallet, isUpdating: isUpdatingWallet } = useUpdateWallet();
   
-  // Wallet state
+  // Two-factor auth state - sync with API
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  
+  // Wallet state - sync with API
   const [walletAddress, setWalletAddress] = useState("");
-  const [walletNetwork, setWalletNetwork] = useState("ethereum");
+  const [walletNetwork, setWalletNetwork] = useState<"ethereum" | "polygon" | "binance" | "arbitrum">("ethereum");
   const [copiedAddress, setCopiedAddress] = useState(false);
+  
+  // Sync API profile data with local state
+  useEffect(() => {
+    if (apiProfile) {
+      setTwoFactorEnabled(apiProfile.twoFactorEnabled || false);
+      setWalletAddress(apiProfile.walletAddress || "");
+      setWalletNetwork((apiProfile.walletNetwork as any) || "ethereum");
+      // Update Redux store with API data
+      dispatch(setProfile({
+        name: apiProfile.name,
+        email: apiProfile.email,
+        phone: apiProfile.phone,
+        bank: apiProfile.bank,
+        kycDocumentName: apiProfile.kycDocumentName,
+        kycStatus: apiProfile.kycStatus,
+        agreementSigned: apiProfile.agreementSigned,
+      }));
+    }
+  }, [apiProfile, dispatch]);
   
   // Password visibility state
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -70,18 +96,27 @@ export default function ProfilePage() {
 
   const profileFormik = useFormik({
     initialValues: {
-      name: profile.name,
-      email: profile.email,
-      phone: profile.phone || "",
-      iban: profile.bank?.iban || "",
-      accountName: profile.bank?.accountName || "",
-      bic: profile.bank?.bic || "",
+      name: apiProfile?.name || profile.name || "",
+      email: apiProfile?.email || profile.email || "",
+      phone: apiProfile?.phone || profile.phone || "",
+      iban: apiProfile?.bank?.iban || profile.bank?.iban || "",
+      accountName: apiProfile?.bank?.accountName || profile.bank?.accountName || "",
+      bic: apiProfile?.bank?.bic || profile.bank?.bic || "",
     },
     validationSchema: profileValidationSchema,
     enableReinitialize: true,
-    onSubmit: async (values, { setSubmitting }) => {
-      setSubmitting(true);
-      setTimeout(() => {
+    onSubmit: async (values, { setSubmitting, setStatus }) => {
+      try {
+        await updateProfile({
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          bank: {
+            iban: values.iban,
+            accountName: values.accountName,
+            bic: values.bic,
+          },
+        });
         dispatch(
           setProfile({
             name: values.name,
@@ -90,8 +125,14 @@ export default function ProfilePage() {
             bank: { iban: values.iban, accountName: values.accountName, bic: values.bic },
           })
         );
+        await refreshProfile(); // Refresh profile data
+        setStatus("Profile updated successfully");
+        setTimeout(() => setStatus(undefined), 3000);
+      } catch (err: any) {
+        setStatus(err.message || "Failed to update profile. Please try again.");
+      } finally {
         setSubmitting(false);
-      }, 500);
+      }
     },
   });
 
@@ -128,27 +169,50 @@ export default function ProfilePage() {
   }, [auth, dispatch]);
 
   useEffect(() => {
-    profileFormik.setValues({
-      name: profile.name,
-      email: profile.email,
-      phone: profile.phone || "",
-      iban: profile.bank?.iban || "",
-      accountName: profile.bank?.accountName || "",
-      bic: profile.bank?.bic || "",
-    });
-  }, [profile.name, profile.email, profile.phone, profile.bank]);
+    if (apiProfile) {
+      profileFormik.setValues({
+        name: apiProfile.name,
+        email: apiProfile.email,
+        phone: apiProfile.phone || "",
+        iban: apiProfile.bank?.iban || "",
+        accountName: apiProfile.bank?.accountName || "",
+        bic: apiProfile.bank?.bic || "",
+      });
+    } else {
+      profileFormik.setValues({
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone || "",
+        iban: profile.bank?.iban || "",
+        accountName: profile.bank?.accountName || "",
+        bic: profile.bank?.bic || "",
+      });
+    }
+  }, [apiProfile?.name, apiProfile?.email, apiProfile?.phone, apiProfile?.bank, profile.name, profile.email, profile.phone, profile.bank]);
 
-  function onUploadKyc(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onUploadKyc(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) dispatch(setKycDocument(file.name));
+    if (file) {
+      try {
+        const result = await uploadKycDocument(file);
+        dispatch(setKycDocument(result.documentName));
+        await refreshProfile(); // Refresh profile data
+      } catch (err: any) {
+        console.error("Failed to upload KYC document:", err);
+        alert(err.message || "Failed to upload KYC document. Please try again.");
+      }
+    }
   }
 
-  function toggleTwoFactor() {
-    setEnablingTwoFactor(true);
-    setTimeout(() => {
-      setTwoFactorEnabled(!twoFactorEnabled);
-      setEnablingTwoFactor(false);
-    }, 1000);
+  async function handleToggleTwoFactor() {
+    try {
+      const result = await toggleTwoFactor({ enabled: !twoFactorEnabled });
+      setTwoFactorEnabled(result.twoFactorEnabled);
+      await refreshProfile(); // Refresh profile data
+    } catch (err: any) {
+      console.error("Failed to toggle two-factor authentication:", err);
+      alert(err.message || "Failed to toggle two-factor authentication. Please try again.");
+    }
   }
 
   function copyWalletAddress() {
@@ -316,12 +380,17 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex justify-end pt-4 border-t border-zinc-800/50">
+                  {profileFormik.status && (
+                    <p className={`text-xs ${profileFormik.status.includes("success") ? "text-green-400" : "text-red-400"}`}>
+                      {profileFormik.status}
+                    </p>
+                  )}
                   <Button 
                     type="submit" 
-                    disabled={profileFormik.isSubmitting}
+                    disabled={profileFormik.isSubmitting || isUpdating || profileLoading}
                     className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 font-medium px-6"
                   >
-                    {profileFormik.isSubmitting ? "Saving..." : "Save Changes"}
+                    {(profileFormik.isSubmitting || isUpdating) ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </form>
@@ -349,10 +418,21 @@ export default function ProfilePage() {
                     accept=".pdf,.jpg,.jpeg,.png"
                     className="text-sm text-zinc-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-gradient-to-r file:from-blue-600 file:to-cyan-600 file:text-white hover:file:from-blue-500 hover:file:to-cyan-500 transition-all cursor-pointer"
                   />
-                  {profile.kycDocumentName ? (
+                  {isUploading ? (
+                    <span className="text-sm text-zinc-400">Uploading...</span>
+                  ) : apiProfile?.kycDocumentName || profile.kycDocumentName ? (
                     <div className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-400" />
-                      <span className="text-sm text-zinc-300 font-medium">{profile.kycDocumentName}</span>
+                      <span className="text-sm text-zinc-300 font-medium">{apiProfile?.kycDocumentName || profile.kycDocumentName}</span>
+                      {apiProfile?.kycStatus && (
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          apiProfile.kycStatus === "approved" ? "bg-green-500/20 text-green-400" :
+                          apiProfile.kycStatus === "rejected" ? "bg-red-500/20 text-red-400" :
+                          "bg-amber-500/20 text-amber-400"
+                        }`}>
+                          {apiProfile.kycStatus}
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <span className="text-sm text-zinc-500">No document uploaded</span>
@@ -507,11 +587,11 @@ export default function ProfilePage() {
                     </p>
                   </div>
                   <button
-                    onClick={toggleTwoFactor}
-                    disabled={enablingTwoFactor}
+                    onClick={handleToggleTwoFactor}
+                    disabled={isTogglingTwoFactor}
                     className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:ring-offset-2 focus:ring-offset-zinc-900 ${
                       twoFactorEnabled ? "bg-green-500" : "bg-zinc-700"
-                    } ${enablingTwoFactor ? "opacity-50 cursor-not-allowed" : ""}`}
+                    } ${isTogglingTwoFactor ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <span
                       className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
@@ -604,13 +684,23 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => {
-                    alert("Wallet address saved");
+                  onClick={async () => {
+                    try {
+                      await updateWallet({
+                        network: walletNetwork,
+                        address: walletAddress,
+                      });
+                      await refreshProfile(); // Refresh profile data
+                      alert("Wallet address saved successfully");
+                    } catch (err: any) {
+                      console.error("Failed to update wallet:", err);
+                      alert(err.message || "Failed to save wallet address. Please try again.");
+                    }
                   }}
-                  disabled={!walletAddress}
+                  disabled={!walletAddress || isUpdatingWallet}
                   className="w-full bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-500 hover:to-purple-400 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-200 font-medium"
                 >
-                  Save Address
+                  {isUpdatingWallet ? "Saving..." : "Save Address"}
                 </Button>
               </div>
             </CardContent>
