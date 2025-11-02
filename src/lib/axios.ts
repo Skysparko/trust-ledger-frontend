@@ -4,7 +4,10 @@ import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "ax
 // Next.js environment variables are loaded at build time, so we read from process.env
 const getBaseURL = (): string => {
   // Priority: API_URL (server-side) > NEXT_PUBLIC_API_URL (both) > default
-  // According to cURL docs, API is at http://localhost:3000
+  // According to cURL docs, API is at http://localhost:3000/api
+  // The endpoints in cURL docs show /api/admin/... so base URL should be http://localhost:3000
+  // and we need to add /api prefix to all endpoints, OR base URL = http://localhost:3000/api
+  // Current approach: base URL = http://localhost:3000/api, endpoints = /admin/...
   const baseURL = 
     process.env.API_URL || 
     process.env.NEXT_PUBLIC_API_URL || 

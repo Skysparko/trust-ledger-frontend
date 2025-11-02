@@ -24,10 +24,13 @@ export abstract class BaseApi {
    * GET request
    */
   protected static async get<T>(url: string, config?: any): Promise<T> {
+    console.log("[BaseApi.get] Making GET request to:", url);
     try {
       const response = await axiosInstance.get<ApiResponse<T>>(url, config);
+      console.log("[BaseApi.get] Response received:", { url, status: response.status, data: response.data });
       return this.extractData(response.data);
     } catch (error) {
+      console.error("[BaseApi.get] Error:", { url, error });
       throw this.handleError(error);
     }
   }

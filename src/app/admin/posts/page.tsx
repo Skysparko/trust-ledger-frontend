@@ -22,41 +22,33 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { posts } from "@/data/posts";
-import type { Post } from "@/data/posts";
+import { useAdminPosts, useCreatePost, useUpdatePost, useDeletePost } from "@/hooks/swr/useAdmin";
+import type { AdminPost } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminPostsPage() {
-  const [items, setItems] = useState<Post[]>([]);
-  const [filteredItems, setFilteredItems] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Post | null>(null);
-  const [formData, setFormData] = useState<Partial<Post>>({});
+  const [editingItem, setEditingItem] = useState<AdminPost | null>(null);
+  const [formData, setFormData] = useState<Partial<AdminPost>>({});
 
-  useEffect(() => {
-    setItems(posts);
-    setFilteredItems(posts);
-  }, []);
+  const { posts: filteredItems, isLoading, mutate } = useAdminPosts({
+    search: searchQuery || undefined,
+    category: undefined,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  });
 
-  useEffect(() => {
-    const filtered = items.filter(
-      (item) =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredItems(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, items]);
+  const { createPost, isCreating } = useCreatePost();
+  const { updatePost, isUpdating } = useUpdatePost();
+  const { deletePost, isDeleting } = useDeletePost();
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  // Ensure paginatedItems is always an array
+  const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
+  const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -70,22 +62,37 @@ export default function AdminPostsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this post?")) {
-      setItems(items.filter((item) => item.id !== id));
+      try {
+        await deletePost({ id });
+        mutate();
+      } catch (error) {
+        console.error("Failed to delete post:", error);
+      }
     }
   };
 
-  const handleSave = () => {
-    if (editingItem) {
-      setItems(items.map((item) => (item.id === editingItem.id ? { ...editingItem, ...formData } as Post : item)));
-    } else {
-      const newId = `post-${items.length + 1}`;
-      setItems([...items, { ...formData, id: newId } as Post]);
+  const handleSave = async () => {
+    try {
+      if (editingItem) {
+        await updatePost({ id: editingItem.id, payload: formData });
+      } else {
+        await createPost({
+          title: formData.title || "",
+          content: formData.content || "",
+          category: (formData.category as any) || "NEWS",
+          isPublished: formData.isPublished ?? true,
+          tags: formData.tags,
+        });
+      }
+      mutate();
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      setFormData({});
+    } catch (error) {
+      console.error("Failed to save post:", error);
     }
-    setIsDialogOpen(false);
-    setEditingItem(null);
-    setFormData({});
   };
 
   return (
@@ -129,7 +136,13 @@ export default function AdminPostsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : paginatedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
                     No posts found
@@ -140,8 +153,8 @@ export default function AdminPostsPage() {
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.title}</TableCell>
                     <TableCell>{item.category}</TableCell>
-                    <TableCell>{item.date}</TableCell>
-                    <TableCell className="max-w-xs truncate">{item.excerpt}</TableCell>
+                    <TableCell>{item.date ? new Date(item.date).toLocaleDateString() : "-"}</TableCell>
+                    <TableCell className="max-w-xs truncate">{item.excerpt || item.content?.substring(0, 100) || "-"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
@@ -212,8 +225,8 @@ export default function AdminPostsPage() {
                   id="category"
                   value={formData.category || ""}
                   options={[
-                    { label: "News", value: "News" },
-                    { label: "Knowledge", value: "Knowledge" },
+                    { label: "News", value: "NEWS" },
+                    { label: "Knowledge", value: "KNOWLEDGE" },
                   ]}
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
                 />
@@ -229,12 +242,12 @@ export default function AdminPostsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="excerpt">Excerpt</Label>
+              <Label htmlFor="content">Content</Label>
               <textarea
-                id="excerpt"
+                id="content"
                 className="w-full min-h-[100px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-                value={formData.excerpt || ""}
-                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                value={formData.content || ""}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               />
             </div>
           </div>
@@ -242,7 +255,9 @@ export default function AdminPostsPage() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave} disabled={isCreating || isUpdating}>
+              {isCreating || isUpdating ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

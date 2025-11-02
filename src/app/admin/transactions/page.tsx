@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,60 +14,53 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getAdminTransactions } from "@/lib/mockApi";
-import type { AdminTransaction } from "@/lib/mockApi";
+import { useAdminTransactions, useExportTransactions } from "@/hooks/swr/useAdmin";
 import { Search, Download } from "lucide-react";
 import { format } from "date-fns";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminTransactionsPage() {
-  const [items, setItems] = useState<AdminTransaction[]>([]);
-  const [filteredItems, setFilteredItems] = useState<AdminTransaction[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    loadTransactions();
-  }, []);
+  const { transactions: filteredItems, isLoading } = useAdminTransactions({
+    search: searchQuery || undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    paymentMethod: paymentMethodFilter !== "all" ? paymentMethodFilter.toUpperCase() : undefined,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  });
 
-  const loadTransactions = async () => {
-    const transactions = await getAdminTransactions();
-    setItems(transactions);
-    setFilteredItems(transactions);
+  const { exportTransactions, isExporting } = useExportTransactions();
+
+  const handleExport = async () => {
+    try {
+      const blob = await exportTransactions({ format: "csv" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `transactions-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export transactions:", error);
+    }
   };
 
-  useEffect(() => {
-    let filtered = items.filter(
-      (item) =>
-        item.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.issuanceTitle.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((item) => item.status === statusFilter);
-    }
-
-    if (paymentMethodFilter !== "all") {
-      filtered = filtered.filter((item) => item.paymentMethod === paymentMethodFilter);
-    }
-
-    setFilteredItems(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, statusFilter, paymentMethodFilter, items]);
-
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  // Ensure paginatedItems is always an array
+  const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
+  const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
       case "confirmed":
+      case "completed":
         return "bg-green-500";
       case "pending":
         return "bg-yellow-500";
@@ -80,8 +73,8 @@ export default function AdminTransactionsPage() {
     }
   };
 
-  const totalAmount = filteredItems.reduce((sum, item) => sum + item.amount, 0);
-  const confirmedAmount = filteredItems
+  const totalAmount = paginatedItems.reduce((sum, item) => sum + item.amount, 0);
+  const confirmedAmount = paginatedItems
     .filter((item) => item.status === "confirmed")
     .reduce((sum, item) => sum + item.amount, 0);
 
@@ -100,7 +93,7 @@ export default function AdminTransactionsPage() {
             <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{filteredItems.length}</div>
+            <div className="text-2xl font-bold">{paginatedItems.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -156,9 +149,9 @@ export default function AdminTransactionsPage() {
               onValueChange={setPaymentMethodFilter}
               className="w-full sm:w-48"
             />
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {isExporting ? "Exporting..." : "Export"}
             </Button>
           </div>
         </CardHeader>
@@ -177,7 +170,13 @@ export default function AdminTransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-zinc-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : paginatedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-zinc-500">
                     No transactions found
@@ -198,7 +197,7 @@ export default function AdminTransactionsPage() {
                     <TableCell>
                       <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
                     </TableCell>
-                    <TableCell>{item.paymentMethod.replace("_", " ")}</TableCell>
+                    <TableCell>{item.paymentMethod?.replace("_", " ") || "-"}</TableCell>
                     <TableCell>{format(new Date(item.date), "MMM dd, yyyy")}</TableCell>
                     <TableCell>{item.bonds || "-"}</TableCell>
                   </TableRow>
@@ -211,8 +210,8 @@ export default function AdminTransactionsPage() {
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-zinc-500">
                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
-                {filteredItems.length} transactions
+                {Math.min(currentPage * ITEMS_PER_PAGE, paginatedItems.length)} of{" "}
+                {paginatedItems.length} transactions
               </p>
               <div className="flex gap-2">
                 <Button

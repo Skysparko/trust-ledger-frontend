@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,79 +13,71 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { getAdminDocuments } from "@/lib/mockApi";
-import type { AdminDocument } from "@/lib/mockApi";
+import { useAdminDocuments, useUploadDocument, useDeleteDocument } from "@/hooks/swr/useAdmin";
+import { AdminApi } from "@/api/admin.api";
 import { Upload, Download, Search, FileText, Trash2 } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminDocumentsPage() {
-  const [items, setItems] = useState<AdminDocument[]>([]);
-  const [filteredItems, setFilteredItems] = useState<AdminDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [uploading, setUploading] = useState(false);
+  
+  const { documents: filteredItems, isLoading, mutate } = useAdminDocuments({
+    search: searchQuery || undefined,
+    category: undefined,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  });
 
-  useEffect(() => {
-    loadDocuments();
-  }, []);
+  const { uploadDocument, isUploading } = useUploadDocument();
+  const { deleteDocument, isDeleting } = useDeleteDocument();
 
-  const loadDocuments = async () => {
-    const docs = await getAdminDocuments();
-    setItems(docs);
-    setFilteredItems(docs);
-  };
-
-  useEffect(() => {
-    const filtered = items.filter(
-      (item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredItems(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, items]);
-
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  // Ensure paginatedItems is always an array
+  const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
+  const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
-    // Simulate upload
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    const newDoc: AdminDocument = {
-      id: `doc_${items.length + 1}`,
-      name: file.name,
-      type: file.name.split(".").pop()?.toLowerCase() === "pdf" ? "pdf" : file.name.split(".").pop()?.toLowerCase() === "doc" || file.name.split(".").pop()?.toLowerCase() === "docx" ? "doc" : "other",
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: "admin_1",
-      category: "other",
-    };
-    
-    setItems([newDoc, ...items]);
-    setUploading(false);
-    e.target.value = "";
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("category", "OTHER");
+
+    try {
+      await uploadDocument(formData);
+      mutate();
+      e.target.value = "";
+    } catch (error) {
+      console.error("Failed to upload document:", error);
+    }
   };
 
-  const handleDownload = (doc: AdminDocument) => {
-    // Simulate download
-    const link = document.createElement("a");
-    link.href = `#`;
-    link.download = doc.name;
-    link.click();
+  const handleDownload = async (id: string, name: string) => {
+    try {
+      const blob = await AdminApi.downloadDocument(id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download document:", error);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this document?")) {
-      setItems(items.filter((item) => item.id !== id));
+      try {
+        await deleteDocument({ id });
+        mutate();
+      } catch (error) {
+        console.error("Failed to delete document:", error);
+      }
     }
   };
 
@@ -123,12 +115,12 @@ export default function AdminDocumentsPage() {
               type="file"
               className="hidden"
               onChange={handleUpload}
-              disabled={uploading}
+              disabled={isUploading}
             />
-            <Button asChild disabled={uploading}>
+            <Button asChild disabled={isUploading}>
               <span>
                 <Upload className="mr-2 h-4 w-4" />
-                {uploading ? "Uploading..." : "Upload Document"}
+                {isUploading ? "Uploading..." : "Upload Document"}
               </span>
             </Button>
           </label>
@@ -163,7 +155,13 @@ export default function AdminDocumentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : paginatedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
                     No documents found
@@ -185,10 +183,10 @@ export default function AdminDocumentsPage() {
                     <TableCell>{item.uploadedBy}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleDownload(item)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDownload(item.id, item.name)}>
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} disabled={isDeleting}>
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>

@@ -62,6 +62,15 @@ export const SwrKeys = {
     transactions: (filters?: any) => ["/admin/transactions", filters],
     transaction: (id: string) => `/admin/transactions/${id}`,
     documents: (filters?: any) => ["/admin/documents", filters],
+    document: (id: string) => `/admin/documents/${id}`,
+    issuances: (filters?: any) => ["/admin/issuances", filters],
+    issuance: (id: string) => `/admin/issuances/${id}`,
+    projects: (filters?: any) => ["/admin/projects", filters],
+    project: (id: string) => `/admin/projects/${id}`,
+    webinars: (filters?: any) => ["/admin/webinars", filters],
+    webinar: (id: string) => `/admin/webinars/${id}`,
+    posts: (filters?: any) => ["/admin/posts", filters],
+    post: (id: string) => `/admin/posts/${id}`,
   },
 
   // Public
@@ -183,6 +192,42 @@ export const adminFetchers = {
     const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
     return AdminApi.getDocuments(filters);
   }) as Fetcher<any, string | [string, any?]>,
+  document: ((key: string) => {
+    const id = key.split("/").pop() || "";
+    return AdminApi.getDocument(id);
+  }) as Fetcher<any, string>,
+  issuances: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return AdminApi.getIssuances(filters);
+  }) as Fetcher<any, string | [string, any?]>,
+  issuance: ((key: string) => {
+    const id = key.split("/").pop() || "";
+    return AdminApi.getIssuance(id);
+  }) as Fetcher<any, string>,
+  projects: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return AdminApi.getProjects(filters);
+  }) as Fetcher<any, string | [string, any?]>,
+  project: ((key: string) => {
+    const id = key.split("/").pop() || "";
+    return AdminApi.getProject(id);
+  }) as Fetcher<any, string>,
+  webinars: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return AdminApi.getWebinars(filters);
+  }) as Fetcher<any, string | [string, any?]>,
+  webinar: ((key: string) => {
+    const id = key.split("/").pop() || "";
+    return AdminApi.getWebinar(id);
+  }) as Fetcher<any, string>,
+  posts: ((key: string | [string, any?]) => {
+    const [endpoint, filters] = Array.isArray(key) ? key : [key, undefined];
+    return AdminApi.getPosts(filters);
+  }) as Fetcher<any, string | [string, any?]>,
+  post: ((key: string) => {
+    const id = key.split("/").pop() || "";
+    return AdminApi.getPost(id);
+  }) as Fetcher<any, string>,
 };
 
 // Public fetchers
@@ -290,7 +335,34 @@ export const swrFetcher: Fetcher<any, string | [string, any?]> = async (key: str
       return (adminFetchers.transactions as any)([endpoint, filters]);
     }
     if (endpoint === "/admin/documents" || endpoint.startsWith("/admin/documents/")) {
+      if (endpoint.startsWith("/admin/documents/") && endpoint !== "/admin/documents" && !endpoint.includes("/download")) {
+        return adminFetchers.document(endpoint);
+      }
       return (adminFetchers.documents as any)([endpoint, filters]);
+    }
+    if (endpoint === "/admin/issuances" || endpoint.startsWith("/admin/issuances/")) {
+      if (endpoint.startsWith("/admin/issuances/") && endpoint !== "/admin/issuances") {
+        return adminFetchers.issuance(endpoint);
+      }
+      return (adminFetchers.issuances as any)([endpoint, filters]);
+    }
+    if (endpoint === "/admin/projects" || endpoint.startsWith("/admin/projects/")) {
+      if (endpoint.startsWith("/admin/projects/") && endpoint !== "/admin/projects") {
+        return adminFetchers.project(endpoint);
+      }
+      return (adminFetchers.projects as any)([endpoint, filters]);
+    }
+    if (endpoint === "/admin/webinars" || endpoint.startsWith("/admin/webinars/")) {
+      if (endpoint.startsWith("/admin/webinars/") && endpoint !== "/admin/webinars") {
+        return adminFetchers.webinar(endpoint);
+      }
+      return (adminFetchers.webinars as any)([endpoint, filters]);
+    }
+    if (endpoint === "/admin/posts" || endpoint.startsWith("/admin/posts/")) {
+      if (endpoint.startsWith("/admin/posts/") && endpoint !== "/admin/posts") {
+        return adminFetchers.post(endpoint);
+      }
+      return (adminFetchers.posts as any)([endpoint, filters]);
     }
   }
 

@@ -23,41 +23,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { projects } from "@/data/projects";
-import type { Project } from "@/data/projects";
+import { useAdminProjects, useCreateProject, useUpdateProject, useDeleteProject } from "@/hooks/swr/useAdmin";
+import type { AdminProject } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminProjectsPage() {
-  const [items, setItems] = useState<Project[]>([]);
-  const [filteredItems, setFilteredItems] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Project | null>(null);
-  const [formData, setFormData] = useState<Partial<Project>>({});
+  const [editingItem, setEditingItem] = useState<AdminProject | null>(null);
+  const [formData, setFormData] = useState<Partial<AdminProject>>({});
 
-  useEffect(() => {
-    setItems(projects);
-    setFilteredItems(projects);
-  }, []);
+  const { projects: filteredItems, isLoading, mutate } = useAdminProjects({
+    search: searchQuery || undefined,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  });
 
-  useEffect(() => {
-    const filtered = items.filter(
-      (item) =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.location.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredItems(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, items]);
+  const { createProject, isCreating } = useCreateProject();
+  const { updateProject, isUpdating } = useUpdateProject();
+  const { deleteProject, isDeleting } = useDeleteProject();
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  // Ensure paginatedItems is always an array
+  const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
+  const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -65,38 +56,56 @@ export default function AdminProjectsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (item: Project) => {
+  const handleEdit = (item: AdminProject) => {
     setEditingItem(item);
     setFormData(item);
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this project?")) {
-      setItems(items.filter((item) => item.id !== id));
+      try {
+        await deleteProject({ id });
+        mutate();
+      } catch (error) {
+        console.error("Failed to delete project:", error);
+      }
     }
   };
 
-  const handleSave = () => {
-    if (editingItem) {
-      setItems(items.map((item) => (item.id === editingItem.id ? { ...editingItem, ...formData } as Project : item)));
-    } else {
-      const newId = `prj-${items.length + 1}`;
-      setItems([...items, { ...formData, id: newId } as Project]);
+  const handleSave = async () => {
+    try {
+      if (editingItem) {
+        await updateProject({ id: editingItem.id, payload: formData });
+      } else {
+        await createProject({
+          title: formData.title || formData.name || "",
+          name: formData.title || formData.name || "",
+          description: formData.description || "",
+          location: formData.location || "",
+          type: formData.type || formData.sector || "",
+          sector: formData.type || formData.sector || "",
+          status: (formData.status as any) || "ACTIVE",
+        });
+      }
+      mutate();
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      setFormData({});
+    } catch (error) {
+      console.error("Failed to save project:", error);
     }
-    setIsDialogOpen(false);
-    setEditingItem(null);
-    setFormData({});
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Live":
+    switch (status?.toUpperCase()) {
+      case "ACTIVE":
+      case "LIVE":
         return "bg-green-500";
-      case "In development":
-        return "bg-blue-500";
-      case "Completed":
+      case "COMPLETED":
         return "bg-gray-500";
+      case "CANCELLED":
+        return "bg-red-500";
       default:
         return "bg-gray-500";
     }
@@ -143,7 +152,13 @@ export default function AdminProjectsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : paginatedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-zinc-500">
                     No projects found
@@ -152,9 +167,9 @@ export default function AdminProjectsPage() {
               ) : (
                 paginatedItems.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell>{item.type}</TableCell>
-                    <TableCell>{item.location}</TableCell>
+                    <TableCell className="font-medium">{item.title || item.name || "-"}</TableCell>
+                    <TableCell>{item.type || item.sector || "-"}</TableCell>
+                    <TableCell>{item.location || "-"}</TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
                     </TableCell>
@@ -218,24 +233,16 @@ export default function AdminProjectsPage() {
                 <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
-                  value={formData.title || ""}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  value={formData.title || formData.name || ""}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value, name: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
-                <Select
+                <Input
                   id="type"
-                  value={formData.type || ""}
-                  options={[
-                    { label: "Technology", value: "Technology" },
-                    { label: "Healthcare", value: "Healthcare" },
-                    { label: "Manufacturing", value: "Manufacturing" },
-                    { label: "Financial Services", value: "Financial Services" },
-                    { label: "Energy", value: "Energy" },
-                    { label: "Real Estate", value: "Real Estate" },
-                  ]}
-                  onValueChange={(value) => setFormData({ ...formData, type: value })}
+                  value={formData.type || formData.sector || ""}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value, sector: e.target.value })}
                 />
               </div>
             </div>
@@ -254,20 +261,30 @@ export default function AdminProjectsPage() {
                   id="status"
                   value={formData.status || ""}
                   options={[
-                    { label: "Live", value: "Live" },
-                    { label: "In development", value: "In development" },
-                    { label: "Completed", value: "Completed" },
+                    { label: "Active", value: "ACTIVE" },
+                    { label: "Completed", value: "COMPLETED" },
+                    { label: "Cancelled", value: "CANCELLED" },
                   ]}
                   onValueChange={(value) => setFormData({ ...formData, status: value as any })}
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={formData.description || ""}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave} disabled={isCreating || isUpdating}>
+              {isCreating || isUpdating ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

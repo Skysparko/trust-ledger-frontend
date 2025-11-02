@@ -14,80 +14,66 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getAdminUsers } from "@/lib/mockApi";
-import type { AdminUserRecord } from "@/lib/mockApi";
+import { useAdminUsers, useUpdateUserKycStatus, useUpdateUserStatus } from "@/hooks/swr/useAdmin";
+import type { AdminUserRecord } from "@/api/admin.api";
 import { Search, CheckCircle2, XCircle, Ban, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminUsersPage() {
-  const [items, setItems] = useState<AdminUserRecord[]>([]);
-  const [filteredItems, setFilteredItems] = useState<AdminUserRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [kycFilter, setKycFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  const { users: items, isLoading, mutate } = useAdminUsers({
+    search: searchQuery || undefined,
+    kycStatus: kycFilter !== "all" ? (kycFilter.toLowerCase() as any) : undefined,
+    isActive: statusFilter !== "all" ? statusFilter === "active" : undefined,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  });
 
-  const loadUsers = async () => {
-    const users = await getAdminUsers();
-    setItems(users);
-    setFilteredItems(users);
-  };
+  const { updateUserKycStatus } = useUpdateUserKycStatus();
+  const { updateUserStatus } = useUpdateUserStatus();
 
-  useEffect(() => {
-    let filtered = items.filter(
-      (item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  // Ensure items is always an array
+  const filteredItems = Array.isArray(items) ? items : [];
 
-    if (kycFilter !== "all") {
-      filtered = filtered.filter((item) => item.kycStatus === kycFilter);
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(
-        (item) => (statusFilter === "active" && item.isActive) || (statusFilter === "inactive" && !item.isActive)
-      );
-    }
-
-    setFilteredItems(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, kycFilter, statusFilter, items]);
-
+  // Remove client-side filtering since API handles it
+  // Note: API handles pagination, so we use all items for now
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
+  const paginatedItemsForDisplay = filteredItems.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  const handleKycApprove = (id: string) => {
-    setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, kycStatus: "approved" as const } : item
-      )
-    );
+  const handleKycApprove = async (id: string) => {
+    try {
+      await updateUserKycStatus({ id, payload: { status: "approved" } });
+      mutate();
+    } catch (error) {
+      console.error("Failed to approve KYC:", error);
+    }
   };
 
-  const handleKycReject = (id: string) => {
-    setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, kycStatus: "rejected" as const } : item
-      )
-    );
+  const handleKycReject = async (id: string) => {
+    try {
+      await updateUserKycStatus({ id, payload: { status: "rejected" } });
+      mutate();
+    } catch (error) {
+      console.error("Failed to reject KYC:", error);
+    }
   };
 
-  const handleToggleActive = (id: string) => {
-    setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, isActive: !item.isActive } : item
-      )
-    );
+  const handleToggleActive = async (id: string, currentStatus: boolean) => {
+    try {
+      await updateUserStatus({ id, payload: { isActive: !currentStatus } });
+      mutate();
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+    }
   };
 
   const getKycStatusColor = (status: string) => {
@@ -161,20 +147,20 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.length === 0 ? (
+              {paginatedItemsForDisplay.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedItems.map((item) => (
+                paginatedItemsForDisplay.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.email}</TableCell>
                     <TableCell>{item.type}</TableCell>
                     <TableCell>
-                      <Badge className={getKycStatusColor(item.kycStatus)}>
+                      <Badge className={getKycStatusColor(item.kycStatus.toLowerCase())}>
                         {item.kycStatus}
                       </Badge>
                     </TableCell>
@@ -209,7 +195,7 @@ export default function AdminUsersPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleToggleActive(item.id)}
+                          onClick={() => handleToggleActive(item.id, item.isActive)}
                           title={item.isActive ? "Deactivate" : "Activate"}
                         >
                           {item.isActive ? (

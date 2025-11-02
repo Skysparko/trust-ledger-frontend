@@ -1,24 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAdminStats } from "@/lib/mockApi";
-import type { AdminStats } from "@/lib/mockApi";
+import { useAdminStats } from "@/hooks/swr/useAdmin";
 import { Users, TrendingUp, Euro, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { stats, isLoading } = useAdminStats();
 
-  useEffect(() => {
-    getAdminStats().then((data) => {
-      setStats(data);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading || !stats) {
+  if (isLoading || !stats) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-zinc-500">Loading...</div>

@@ -21,41 +21,32 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { webinars } from "@/data/webinars";
-import type { Webinar } from "@/data/webinars";
+import { useAdminWebinars, useCreateWebinar, useUpdateWebinar, useDeleteWebinar } from "@/hooks/swr/useAdmin";
+import type { AdminWebinar } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminWebinarsPage() {
-  const [items, setItems] = useState<Webinar[]>([]);
-  const [filteredItems, setFilteredItems] = useState<Webinar[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Webinar | null>(null);
-  const [formData, setFormData] = useState<Partial<Webinar>>({});
+  const [editingItem, setEditingItem] = useState<AdminWebinar | null>(null);
+  const [formData, setFormData] = useState<Partial<AdminWebinar>>({});
 
-  useEffect(() => {
-    setItems(webinars);
-    setFilteredItems(webinars);
-  }, []);
+  const { webinars: filteredItems, isLoading, mutate } = useAdminWebinars({
+    search: searchQuery || undefined,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  });
 
-  useEffect(() => {
-    const filtered = items.filter(
-      (item) =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.speaker.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredItems(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, items]);
+  const { createWebinar, isCreating } = useCreateWebinar();
+  const { updateWebinar, isUpdating } = useUpdateWebinar();
+  const { deleteWebinar, isDeleting } = useDeleteWebinar();
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  // Ensure paginatedItems is always an array
+  const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
+  const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -69,22 +60,38 @@ export default function AdminWebinarsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this webinar?")) {
-      setItems(items.filter((item) => item.id !== id));
+      try {
+        await deleteWebinar({ id });
+        mutate();
+      } catch (error) {
+        console.error("Failed to delete webinar:", error);
+      }
     }
   };
 
-  const handleSave = () => {
-    if (editingItem) {
-      setItems(items.map((item) => (item.id === editingItem.id ? { ...editingItem, ...formData } as Webinar : item)));
-    } else {
-      const newId = `web-${items.length + 1}`;
-      setItems([...items, { ...formData, id: newId } as Webinar]);
+  const handleSave = async () => {
+    try {
+      if (editingItem) {
+        await updateWebinar({ id: editingItem.id, payload: formData });
+      } else {
+        await createWebinar({
+          title: formData.title || "",
+          description: formData.description || "",
+          date: formData.date || new Date().toISOString(),
+          duration: formData.duration || 60,
+          link: formData.link || "",
+          isActive: formData.isActive ?? true,
+        });
+      }
+      mutate();
+      setIsDialogOpen(false);
+      setEditingItem(null);
+      setFormData({});
+    } catch (error) {
+      console.error("Failed to save webinar:", error);
     }
-    setIsDialogOpen(false);
-    setEditingItem(null);
-    setFormData({});
   };
 
   return (
@@ -127,7 +134,13 @@ export default function AdminWebinarsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedItems.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-zinc-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : paginatedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-zinc-500">
                     No webinars found
@@ -137,8 +150,8 @@ export default function AdminWebinarsPage() {
                 paginatedItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell>{item.speaker}</TableCell>
-                    <TableCell>{item.date}</TableCell>
+                    <TableCell>{item.description || "-"}</TableCell>
+                    <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
@@ -202,13 +215,30 @@ export default function AdminWebinarsPage() {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                value={formData.description || ""}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="speaker">Speaker</Label>
+                <Label htmlFor="link">Link</Label>
                 <Input
-                  id="speaker"
-                  value={formData.speaker || ""}
-                  onChange={(e) => setFormData({ ...formData, speaker: e.target.value })}
+                  id="link"
+                  value={formData.link || ""}
+                  onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration (minutes)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  value={formData.duration || 60}
+                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
                 />
               </div>
               <div className="space-y-2">
@@ -226,7 +256,9 @@ export default function AdminWebinarsPage() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave} disabled={isCreating || isUpdating}>
+              {isCreating || isUpdating ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
