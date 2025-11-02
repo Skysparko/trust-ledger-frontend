@@ -577,7 +577,7 @@ export default function InvestmentOpportunityDetailPage() {
 
           {/* Invest Button */}
           <Button
-            onClick={() => dispatch(openSubscription({ issuance: opportunity.title }))}
+            onClick={() => dispatch(openSubscription({ issuance: opportunity.id }))}
             className="w-full bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-600 text-white hover:from-blue-500 hover:via-blue-400 hover:to-cyan-500 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all duration-300 font-semibold py-6 text-lg"
             size="lg"
             disabled={opportunity.status !== "active"}

@@ -46,7 +46,7 @@ export type UserInvestment = {
 };
 
 export type CreateInvestmentPayload = {
-  issuanceId: string;
+  investmentOpportunityId: string;
   bonds: number;
   paymentMethod: "bank_transfer" | "credit_card" | "sepa";
 };
@@ -178,7 +178,7 @@ export class UserApi extends BaseApi {
    * Create new investment
    * POST /api/user/investments
    * Note: amount is calculated as bonds * 100 (€100 per bond)
-   * Investment must meet minimum and maximum investment requirements of the issuance
+   * Investment must meet minimum and maximum investment requirements of the investment opportunity
    */
   static async createInvestment(payload: CreateInvestmentPayload): Promise<UserInvestment> {
     return this.post<UserInvestment>("/user/investments", payload);
