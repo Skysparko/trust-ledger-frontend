@@ -53,8 +53,8 @@ export default function DashboardPage() {
     if (!apiInvestments) return [];
     return apiInvestments.map((inv) => ({
       id: inv.id,
-      issuance: `Investment Opportunity ${inv.issuanceId}`,
-      date: inv.createdAt,
+      issuance: inv.investmentOpportunityTitle || `Investment Opportunity ${inv.issuanceId || 'N/A'}`,
+      date: inv.date || inv.createdAt,
       amount: inv.amount,
       bonds: inv.bonds,
       status: inv.status,

@@ -37,10 +37,12 @@ export type UpdateWalletPayload = {
 export type UserInvestment = {
   id: string;
   issuanceId: string;
+  investmentOpportunityTitle?: string;
   bonds: number;
   amount: number;
   paymentMethod: "bank_transfer" | "credit_card" | "sepa";
-  status: "pending" | "confirmed" | "failed" | "refunded";
+  status: "pending" | "confirmed" | "failed" | "refunded" | "cancelled";
+  date?: string;
   createdAt: string;
   updatedAt: string;
 };
