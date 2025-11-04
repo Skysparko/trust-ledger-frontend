@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { hydrateFromStorage } from "@/store/slices/auth";
 import { hydrateFromAuth, setKycDocument, setProfile } from "@/store/slices/profile";
@@ -644,17 +645,18 @@ export default function ProfilePage() {
                   <Label htmlFor="walletNetwork" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                     Network
                   </Label>
-                  <select
+                  <Select
                     id="walletNetwork"
+                    options={[
+                      { label: "Ethereum", value: "ethereum" },
+                      { label: "Polygon", value: "polygon" },
+                      { label: "Binance Smart Chain", value: "binance" },
+                      { label: "Arbitrum", value: "arbitrum" },
+                    ]}
                     value={walletNetwork}
-                    onChange={(e) => setWalletNetwork(e.target.value as "ethereum" | "polygon" | "binance" | "arbitrum")}
-                    className="h-11 w-full rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
-                  >
-                    <option value="ethereum">Ethereum</option>
-                    <option value="polygon">Polygon</option>
-                    <option value="binance">Binance Smart Chain</option>
-                    <option value="arbitrum">Arbitrum</option>
-                  </select>
+                    onValueChange={(value) => setWalletNetwork(value as "ethereum" | "polygon" | "binance" | "arbitrum")}
+                    className="h-11"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="walletAddress" className="text-xs font-semibold uppercase tracking-wide text-zinc-400">

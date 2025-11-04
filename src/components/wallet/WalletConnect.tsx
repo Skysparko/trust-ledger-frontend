@@ -39,7 +39,7 @@ export function WalletConnect() {
       </button>
 
       {showConnectors && (
-        <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-[200px] z-50">
+        <div className="absolute top-full mt-2 left-0 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl p-2 min-w-[200px] z-[60]">
           {connectors.map((connector) => (
             <button
               key={connector.id}
@@ -47,7 +47,7 @@ export function WalletConnect() {
                 connect({ connector });
                 setShowConnectors(false);
               }}
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded transition-colors"
+              className="w-full text-left px-4 py-2 hover:bg-zinc-700 rounded transition-colors text-white text-sm"
             >
               {connector.name}
             </button>
