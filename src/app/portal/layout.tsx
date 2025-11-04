@@ -19,20 +19,42 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const notifications = useAppSelector((s) => s.notifications.items);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(true);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  // Helper to check if auth cookies exist
+  const hasAuthCookie = () => {
+    if (typeof document === "undefined") return false;
+    const cookies = document.cookie.split(';');
+    return cookies.some(c => {
+      const trimmed = c.trim();
+      return trimmed.startsWith('auth=') || trimmed.startsWith('auth_token=');
+    });
+  };
+
   useEffect(() => {
     dispatch(hydrateFromStorage());
+    
+    // Mark hydration as complete after Redux state update
+    setTimeout(() => {
+      setIsHydrating(false);
+    }, 0);
   }, [dispatch]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
+    // Wait for hydration to complete before checking authentication
+    if (isHydrating) return;
+    
     if (!isAuthenticated || !user) {
-      router.push("/login");
+      // Double-check cookie before redirecting (in case Redux state hasn't updated yet)
+      if (!hasAuthCookie()) {
+        router.push("/login");
+      }
       return;
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, router, isHydrating]);
 
   useEffect(() => {
     if (userMenuOpen) {
@@ -66,8 +88,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     setUserMenuOpen(false);
   }
 
-  // Show loading if user is not authenticated
-  if (!isAuthenticated || !user) {
+  // Show loading if hydrating or user is not authenticated
+  // If we're hydrating and have auth cookie, wait for Redux to update
+  // Otherwise, if not authenticated and no cookie, redirect will happen
+  if (isHydrating || !isAuthenticated || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="text-white">Loading...</div>

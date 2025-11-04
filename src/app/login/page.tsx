@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useFormik } from "formik";
@@ -30,14 +30,25 @@ export default function LoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+  const [isHydrating, setIsHydrating] = useState(true);
 
   useEffect(() => {
     dispatch(hydrateFromStorage());
+    // Mark hydration as complete after state update
+    setTimeout(() => {
+      setIsHydrating(false);
+    }, 0);
   }, [dispatch]);
 
   useEffect(() => {
-    if (isAuthenticated) router.push("/portal/dashboard");
-  }, [isAuthenticated, router]);
+    // Wait for hydration to complete before redirecting
+    if (isHydrating) return;
+    
+    if (isAuthenticated) {
+      // Redirect to portal dashboard (not a specific page to avoid loops)
+      router.push("/portal/dashboard");
+    }
+  }, [isAuthenticated, router, isHydrating]);
 
   const formik = useFormik({
     initialValues: {
