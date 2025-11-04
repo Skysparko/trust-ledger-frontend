@@ -14,6 +14,8 @@ import { useInvestmentOpportunitiesDropdown } from "@/hooks/swr/useInvestmentOpp
 import { useUserCreateInvestment } from "@/hooks/swr/useUser";
 import { useUserInvestments } from "@/hooks/swr/useUser";
 import { CheckCircle2, AlertCircle } from "lucide-react";
+import { useAccount } from "wagmi";
+import { WalletConnect } from "@/components/wallet/WalletConnect";
 
 const paymentMethodOptions = [
   { label: "Bank transfer", value: "bank_transfer" },
@@ -34,6 +36,7 @@ export function SubscriptionModal() {
   const dispatch = useAppDispatch();
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { address: walletAddress, isConnected: isWalletConnected } = useAccount();
   
   // API hooks
   const { createInvestment, isCreating, error: createError } = useUserCreateInvestment();
@@ -106,6 +109,7 @@ export function SubscriptionModal() {
           investmentOpportunityId: values.issuance,
           bonds: values.bonds,
           paymentMethod: values.method as "bank_transfer" | "credit_card" | "sepa",
+          walletAddress: walletAddress || undefined, // Include wallet address if connected
         };
         
         await createInvestment(payload);
@@ -175,7 +179,16 @@ export function SubscriptionModal() {
           <>
             <div className="mb-6">
               <h3 className="text-2xl font-bold text-white mb-2">New Investment</h3>
-              <p className="text-sm text-zinc-400">Complete the form below to invest in this opportunity</p>
+              <p className="text-sm text-zinc-400 mb-4">Complete the form below to invest in this opportunity</p>
+              <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
+                <div>
+                  <p className="text-xs text-zinc-400 mb-1">Wallet Connection</p>
+                  <p className="text-sm text-zinc-300">
+                    {isWalletConnected ? "Connected for on-chain bond minting" : "Connect wallet to receive bond tokens"}
+                  </p>
+                </div>
+                <WalletConnect />
+              </div>
             </div>
             <form onSubmit={formik.handleSubmit} className="space-y-5">
               <div className="space-y-2">
