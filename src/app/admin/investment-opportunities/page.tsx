@@ -419,17 +419,18 @@ export default function AdminInvestmentOpportunitiesPage() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
       case "active":
-        return "bg-green-500";
+        return "bg-green-500/20 text-green-400 border-green-500/30 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30";
       case "upcoming":
-        return "bg-blue-500";
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30";
       case "closed":
-        return "bg-gray-500";
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30";
       case "paused":
-        return "bg-yellow-500";
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30";
       default:
-        return "bg-gray-500";
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30";
     }
   };
 
