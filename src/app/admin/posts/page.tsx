@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,17 +27,55 @@ import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useAdminPosts, useCreatePost, useUpdatePost, useDeletePost } from "@/hooks/swr/useAdmin";
-import type { AdminPost, UpdateAdminPostPayload } from "@/api/admin.api";
+import type { AdminPost, UpdateAdminPostPayload, CreateAdminPostPayload } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
+
+// Helper function to convert date to ISO format
+const formatDateToISO = (dateStr: string | undefined): string | undefined => {
+  if (!dateStr) return undefined;
+  if (dateStr.includes('T')) return dateStr;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0));
+  return date.toISOString();
+};
+
+// Helper function to convert ISO date to YYYY-MM-DD format
+const formatDateFromISO = (dateStr: string | undefined): string => {
+  if (!dateStr) return "";
+  if (dateStr.includes('T')) {
+    return dateStr.split('T')[0];
+  }
+  return dateStr;
+};
+
+const validationSchema = Yup.object({
+  title: Yup.string()
+    .min(2, "Title must be at least 2 characters")
+    .required("Title is required"),
+  content: Yup.string()
+    .min(10, "Content must be at least 10 characters")
+    .required("Content is required"),
+  category: Yup.string()
+    .oneOf(["NEWS", "KNOWLEDGE"], "Category must be either NEWS or KNOWLEDGE")
+    .required("Category is required"),
+  date: Yup.string()
+    .optional(),
+  excerpt: Yup.string()
+    .optional(),
+  isPublished: Yup.boolean()
+    .optional(),
+  tags: Yup.array()
+    .of(Yup.string())
+    .optional(),
+});
 
 export default function AdminPostsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AdminPost | null>(null);
-  const [formData, setFormData] = useState<Partial<AdminPost>>({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
@@ -54,15 +94,83 @@ export default function AdminPostsPage() {
   const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
   const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
 
+  const getInitialValues = (item?: AdminPost | null): Partial<CreateAdminPostPayload> => {
+    if (item) {
+      const normalizedCategory = item.category 
+        ? (item.category.toUpperCase() as "NEWS" | "KNOWLEDGE")
+        : "NEWS";
+      return {
+        title: item.title || "",
+        content: item.content || "",
+        category: normalizedCategory,
+        date: formatDateFromISO(item.date),
+        excerpt: item.excerpt || "",
+        isPublished: item.isPublished ?? true,
+        tags: item.tags || [],
+      };
+    }
+    return {
+      title: "",
+      content: "",
+      category: "NEWS",
+      date: new Date().toISOString().split("T")[0],
+      excerpt: "",
+      isPublished: true,
+      tags: [],
+    };
+  };
+
+  const formik = useFormik<Partial<CreateAdminPostPayload>>({
+    initialValues: getInitialValues(),
+    validationSchema,
+    enableReinitialize: false,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        const dateValue = formatDateToISO(values.date);
+        
+        if (editingItem) {
+          const payload: UpdateAdminPostPayload = {
+            title: values.title,
+            content: values.content,
+            category: values.category,
+            date: dateValue,
+            excerpt: values.excerpt,
+            isPublished: values.isPublished,
+            tags: values.tags,
+          };
+          await updatePost({ id: editingItem.id, payload });
+        } else {
+          await createPost({
+            title: values.title!,
+            content: values.content!,
+            category: values.category!,
+            date: dateValue,
+            excerpt: values.excerpt,
+            isPublished: values.isPublished ?? true,
+            tags: values.tags,
+          });
+        }
+        mutate();
+        setIsDialogOpen(false);
+        setEditingItem(null);
+        formik.resetForm();
+      } catch (error) {
+        console.error("Failed to save post:", error);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
+
   const handleCreate = () => {
     setEditingItem(null);
-    setFormData({ date: new Date().toISOString().split("T")[0] });
+    formik.resetForm({ values: getInitialValues(null) });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item: AdminPost) => {
     setEditingItem(item);
-    setFormData(item);
+    formik.resetForm({ values: getInitialValues(item) });
     setIsDialogOpen(true);
   };
 
@@ -82,69 +190,6 @@ export default function AdminPostsPage() {
     } catch (error) {
       console.error("Failed to delete post:", error);
       throw error;
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      if (editingItem) {
-        // Transform formData to match UpdateAdminPostPayload type
-        const payload: UpdateAdminPostPayload = {};
-        if (formData.title) payload.title = formData.title;
-        if (formData.content) payload.content = formData.content;
-        if (formData.category) {
-          // Normalize category to uppercase
-          const normalizedCategory = formData.category.toUpperCase();
-          if (normalizedCategory === "NEWS" || normalizedCategory === "KNOWLEDGE") {
-            payload.category = normalizedCategory as "NEWS" | "KNOWLEDGE";
-          }
-        }
-        if (formData.isPublished !== undefined) payload.isPublished = formData.isPublished;
-        if (formData.tags) payload.tags = formData.tags;
-        if (formData.excerpt) payload.excerpt = formData.excerpt;
-        if (formData.date) {
-          // Convert date to ISO format if needed
-          if (formData.date.includes('T')) {
-            payload.date = formData.date;
-          } else {
-            const [year, month, day] = formData.date.split('-').map(Number);
-            const date = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0));
-            payload.date = date.toISOString();
-          }
-        }
-        await updatePost({ id: editingItem.id, payload });
-      } else {
-        // Convert date to ISO string format if provided
-        let dateValue: string | undefined;
-        if (formData.date) {
-          // If date is already in ISO format, use it; otherwise convert
-          if (formData.date.includes('T')) {
-            dateValue = formData.date;
-          } else {
-            // Convert "yyyy-MM-dd" format to ISO string with time
-            // Parse as UTC to avoid timezone issues
-            const [year, month, day] = formData.date.split('-').map(Number);
-            const date = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0));
-            dateValue = date.toISOString();
-          }
-        }
-        
-        await createPost({
-          title: formData.title || "",
-          content: formData.content || "",
-          category: (formData.category as any) || "NEWS",
-          date: dateValue,
-          excerpt: formData.excerpt,
-          isPublished: formData.isPublished ?? true,
-          tags: formData.tags,
-        });
-      }
-      mutate();
-      setIsDialogOpen(false);
-      setEditingItem(null);
-      setFormData({});
-    } catch (error) {
-      console.error("Failed to save post:", error);
     }
   };
 
@@ -262,78 +307,103 @@ export default function AdminPostsPage() {
               {editingItem ? "Update the post details" : "Add a new blog or news post"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={formData.title || ""}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={formik.handleSubmit}>
+            <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  id="category"
-                  value={formData.category || ""}
-                  options={[
-                    { label: "News", value: "NEWS" },
-                    { label: "Knowledge", value: "KNOWLEDGE" },
-                  ]}
-                  onValueChange={(value) => setFormData({ ...formData, category: value as AdminPost["category"] })}
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={formik.values.title || ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                 />
+                {formik.touched.title && formik.errors.title && (
+                  <p className="text-xs text-red-500">{formik.errors.title}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    id="category"
+                    value={formik.values.category || ""}
+                    options={[
+                      { label: "News", value: "NEWS" },
+                      { label: "Knowledge", value: "KNOWLEDGE" },
+                    ]}
+                    onValueChange={(value) => formik.setFieldValue("category", value as "NEWS" | "KNOWLEDGE")}
+                  />
+                  {formik.touched.category && formik.errors.category && (
+                    <p className="text-xs text-red-500">{formik.errors.category}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <DatePicker
+                    id="date"
+                    value={formik.values.date || ""}
+                    onChange={(value) => formik.setFieldValue("date", value)}
+                    placeholder="Select a date"
+                  />
+                  {formik.touched.date && formik.errors.date && (
+                    <p className="text-xs text-red-500">{formik.errors.date}</p>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="date">Date</Label>
-                <DatePicker
-                  id="date"
-                  value={formData.date || ""}
-                  onChange={(value) => setFormData({ ...formData, date: value })}
-                  placeholder="Select a date"
+                <Label htmlFor="excerpt">Excerpt</Label>
+                <textarea
+                  id="excerpt"
+                  name="excerpt"
+                  className="w-full min-h-[80px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                  value={formik.values.excerpt || ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  placeholder="Brief description of the post..."
                 />
+                {formik.touched.excerpt && formik.errors.excerpt && (
+                  <p className="text-xs text-red-500">{formik.errors.excerpt}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="content">Content</Label>
+                <textarea
+                  id="content"
+                  name="content"
+                  className="w-full min-h-[100px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                  value={formik.values.content || ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                />
+                {formik.touched.content && formik.errors.content && (
+                  <p className="text-xs text-red-500">{formik.errors.content}</p>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isPublished"
+                  name="isPublished"
+                  checked={formik.values.isPublished ?? true}
+                  onChange={(e) => formik.setFieldValue("isPublished", e.target.checked)}
+                  onBlur={formik.handleBlur}
+                  className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900"
+                />
+                <Label htmlFor="isPublished" className="cursor-pointer">
+                  Publish immediately
+                </Label>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="excerpt">Excerpt</Label>
-              <textarea
-                id="excerpt"
-                className="w-full min-h-[80px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-                value={formData.excerpt || ""}
-                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-                placeholder="Brief description of the post..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
-              <textarea
-                id="content"
-                className="w-full min-h-[100px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-                value={formData.content || ""}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isPublished"
-                checked={formData.isPublished ?? true}
-                onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900"
-              />
-              <Label htmlFor="isPublished" className="cursor-pointer">
-                Publish immediately
-              </Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={isCreating || isUpdating}>
-              {isCreating || isUpdating ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreating || isUpdating || formik.isSubmitting}>
+                {isCreating || isUpdating || formik.isSubmitting ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

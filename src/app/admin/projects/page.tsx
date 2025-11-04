@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,17 +27,31 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useAdminProjects, useAdminCreateProject, useAdminUpdateProject, useAdminDeleteProject } from "@/hooks/swr/useAdmin";
-import type { AdminProject } from "@/api/admin.api";
+import type { AdminProject, CreateAdminProjectPayload } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
+
+const validationSchema = Yup.object({
+  title: Yup.string()
+    .min(2, "Title must be at least 2 characters")
+    .required("Title is required"),
+  location: Yup.string()
+    .required("Location is required"),
+  type: Yup.string()
+    .optional(),
+  status: Yup.string()
+    .oneOf(["ACTIVE", "COMPLETED", "CANCELLED", "In development", "Live", "Completed"], "Invalid status")
+    .required("Status is required"),
+  description: Yup.string()
+    .optional(),
+});
 
 export default function AdminProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AdminProject | null>(null);
-  const [formData, setFormData] = useState<Partial<AdminProject>>({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
@@ -53,15 +69,65 @@ export default function AdminProjectsPage() {
   const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
   const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
 
+  const getInitialValues = (item?: AdminProject | null): Partial<CreateAdminProjectPayload> => {
+    if (item) {
+      return {
+        title: item.title || item.name || "",
+        location: item.location || "",
+        type: item.type || item.sector || "",
+        status: item.status || "ACTIVE",
+        description: item.description || "",
+      };
+    }
+    return {
+      title: "",
+      location: "",
+      type: "",
+      status: "ACTIVE",
+      description: "",
+    };
+  };
+
+  const formik = useFormik<Partial<CreateAdminProjectPayload>>({
+    initialValues: getInitialValues(),
+    validationSchema,
+    enableReinitialize: false,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        if (editingItem) {
+          await updateProject({ id: editingItem.id, payload: values });
+        } else {
+          await createProject({
+            title: values.title || "",
+            name: values.title || "",
+            description: values.description || "",
+            location: values.location || "",
+            type: values.type || "",
+            sector: values.type || "",
+            status: (values.status as any) || "ACTIVE",
+          });
+        }
+        mutate();
+        setIsDialogOpen(false);
+        setEditingItem(null);
+        formik.resetForm();
+      } catch (error) {
+        console.error("Failed to save project:", error);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
+
   const handleCreate = () => {
     setEditingItem(null);
-    setFormData({});
+    formik.resetForm({ values: getInitialValues(null) });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (item: AdminProject) => {
     setEditingItem(item);
-    setFormData(item);
+    formik.resetForm({ values: getInitialValues(item) });
     setIsDialogOpen(true);
   };
 
@@ -81,30 +147,6 @@ export default function AdminProjectsPage() {
     } catch (error) {
       console.error("Failed to delete project:", error);
       throw error;
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      if (editingItem) {
-        await updateProject({ id: editingItem.id, payload: formData });
-      } else {
-        await createProject({
-          title: formData.title || formData.name || "",
-          name: formData.title || formData.name || "",
-          description: formData.description || "",
-          location: formData.location || "",
-          type: formData.type || formData.sector || "",
-          sector: formData.type || formData.sector || "",
-          status: (formData.status as any) || "ACTIVE",
-        });
-      }
-      mutate();
-      setIsDialogOpen(false);
-      setEditingItem(null);
-      setFormData({});
-    } catch (error) {
-      console.error("Failed to save project:", error);
     }
   };
 
@@ -239,65 +281,90 @@ export default function AdminProjectsPage() {
               {editingItem ? "Update the project details" : "Add a new project to the platform"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title || formData.name || ""}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value, name: e.target.value })}
-                />
+          <form onSubmit={formik.handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    name="title"
+                    value={formik.values.title || ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                  {formik.touched.title && formik.errors.title && (
+                    <p className="text-xs text-red-500">{formik.errors.title}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Input
+                    id="type"
+                    name="type"
+                    value={formik.values.type || ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                  {formik.touched.type && formik.errors.type && (
+                    <p className="text-xs text-red-500">{formik.errors.type}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    value={formik.values.location || ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                  {formik.touched.location && formik.errors.location && (
+                    <p className="text-xs text-red-500">{formik.errors.location}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    id="status"
+                    value={formik.values.status || ""}
+                    options={[
+                      { label: "Active", value: "ACTIVE" },
+                      { label: "Completed", value: "COMPLETED" },
+                      { label: "Cancelled", value: "CANCELLED" },
+                    ]}
+                    onValueChange={(value) => formik.setFieldValue("status", value as any)}
+                  />
+                  {formik.touched.status && formik.errors.status && (
+                    <p className="text-xs text-red-500">{formik.errors.status}</p>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="description">Description</Label>
                 <Input
-                  id="type"
-                  value={formData.type || formData.sector || ""}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value, sector: e.target.value })}
+                  id="description"
+                  name="description"
+                  value={formik.values.description || ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                 />
+                {formik.touched.description && formik.errors.description && (
+                  <p className="text-xs text-red-500">{formik.errors.description}</p>
+                )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location || ""}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  id="status"
-                  value={formData.status || ""}
-                  options={[
-                    { label: "Active", value: "ACTIVE" },
-                    { label: "Completed", value: "COMPLETED" },
-                    { label: "Cancelled", value: "CANCELLED" },
-                  ]}
-                  onValueChange={(value) => setFormData({ ...formData, status: value as any })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={isCreating || isUpdating}>
-              {isCreating || isUpdating ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreating || isUpdating || formik.isSubmitting}>
+                {isCreating || isUpdating || formik.isSubmitting ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
