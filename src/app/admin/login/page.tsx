@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useFormik } from "formik";
@@ -28,14 +28,25 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((s) => s.adminAuth.isAuthenticated);
+  const [isHydrating, setIsHydrating] = useState(true);
 
   useEffect(() => {
     dispatch(hydrateAdminFromStorage());
+    // Mark hydration as complete after state update
+    setTimeout(() => {
+      setIsHydrating(false);
+    }, 0);
   }, [dispatch]);
 
   useEffect(() => {
-    if (isAuthenticated) router.push("/admin");
-  }, [isAuthenticated, router]);
+    // Wait for hydration to complete before redirecting
+    if (isHydrating) return;
+    
+    if (isAuthenticated) {
+      // Redirect to admin dashboard (not a specific page to avoid loops)
+      router.push("/admin");
+    }
+  }, [isAuthenticated, router, isHydrating]);
 
   const formik = useFormik({
     initialValues: {

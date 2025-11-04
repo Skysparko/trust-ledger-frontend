@@ -46,17 +46,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isAuthenticated = useAppSelector((s) => s.adminAuth.isAuthenticated);
   const isLoginPage = pathname === "/admin/login";
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(true);
+
+  // Helper to check if admin auth cookie exists
+  const hasAdminAuthCookie = () => {
+    if (typeof document === "undefined") return false;
+    return document.cookie.split(';').some(c => c.trim().startsWith('admin_auth='));
+  };
 
   useEffect(() => {
     dispatch(hydrateAdminFromStorage());
+    
+    // Mark hydration as complete after Redux state update
+    // Use setTimeout to ensure state has updated after dispatch
+    setTimeout(() => {
+      setIsHydrating(false);
+    }, 0);
   }, [dispatch]);
 
   useEffect(() => {
+    // Wait for hydration to complete before checking authentication
+    if (isHydrating) return;
+    
     const isLogin = pathname === "/admin/login";
+    
+    // Only redirect if not authenticated AND not on login page
+    // Trust the cookie if it exists (middleware already validated it)
+    // This prevents redirect loops during page reload
     if (!isAuthenticated && !isLogin) {
-      router.push("/admin/login");
+      // If cookie exists but Redux state says not authenticated, 
+      // the state will update shortly from hydration - don't redirect
+      if (!hasAdminAuthCookie()) {
+        router.push("/admin/login");
+      }
     }
-  }, [isAuthenticated, pathname, router]);
+  }, [isAuthenticated, pathname, router, isHydrating]);
 
   const handleLogout = () => {
     dispatch(adminLogout());
