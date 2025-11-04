@@ -121,6 +121,7 @@ export default function TransactionDetailPage() {
   };
 
   const handleCopyTransactionId = async () => {
+    if (!transaction) return;
     try {
       await navigator.clipboard.writeText(transaction.id);
       setCopiedId(true);

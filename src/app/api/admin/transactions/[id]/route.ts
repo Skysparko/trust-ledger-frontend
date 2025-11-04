@@ -9,10 +9,10 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const transactionId = params.id;
+    const { id: transactionId } = await params;
 
     // Validate transaction ID
     if (!transactionId) {
