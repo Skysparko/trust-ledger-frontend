@@ -99,6 +99,7 @@ export default function AdminInvestmentOpportunitiesPage() {
   const [milestones, setMilestones] = useState<Omit<InvestmentOpportunityMilestone, "status">[]>([]);
   const [faqs, setFaqs] = useState<InvestmentOpportunityFAQ[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [tagsInput, setTagsInput] = useState<string>("");
 
   // Reset to page 1 when search changes
   useEffect(() => {
@@ -169,6 +170,7 @@ export default function AdminInvestmentOpportunitiesPage() {
     setMilestones([]);
     setFaqs([]);
     setTags([]);
+    setTagsInput("");
     setActiveTab("basic");
     setIsDialogOpen(true);
   };
@@ -186,6 +188,7 @@ export default function AdminInvestmentOpportunitiesPage() {
       setMilestones((detail.milestones || []).map(m => ({ date: m.date, description: m.description })));
       setFaqs(detail.faq || []);
       setTags(detail.tags || []);
+      setTagsInput((detail.tags || []).join(", "));
       setActiveTab("basic");
       setIsDialogOpen(true);
     } catch (err: any) {
@@ -412,6 +415,7 @@ export default function AdminInvestmentOpportunitiesPage() {
     setMilestones([]);
     setFaqs([]);
     setTags([]);
+    setTagsInput("");
   };
 
   const getStatusColor = (status: string) => {
@@ -1059,10 +1063,37 @@ export default function AdminInvestmentOpportunitiesPage() {
               <div className="space-y-2">
                 <Label>Tags (comma-separated)</Label>
                 <Input
-                  value={tags.join(", ")}
-                  onChange={(e) => setTags(e.target.value.split(",").map(t => t.trim()).filter(t => t))}
+                  value={tagsInput}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    setTagsInput(inputValue);
+                    // Update tags array by parsing complete tags (separated by commas)
+                    const parsedTags = inputValue
+                      .split(",")
+                      .map(t => t.trim())
+                      .filter(t => t.length > 0);
+                    setTags(parsedTags);
+                  }}
+                  onBlur={(e) => {
+                    // On blur, ensure the input shows all tags cleanly
+                    const parsedTags = e.target.value
+                      .split(",")
+                      .map(t => t.trim())
+                      .filter(t => t.length > 0);
+                    setTagsInput(parsedTags.join(", "));
+                    setTags(parsedTags);
+                  }}
                   placeholder="tag1, tag2, tag3"
                 />
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
