@@ -76,7 +76,7 @@ export function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:py-4">
         <Link href="/" className="flex items-center gap-2">
           <Image src="/globe.svg" alt="Logo" width={32} height={32} />
-          <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-lg font-extrabold tracking-tight text-transparent">TrustLedger</span>
+          <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-lg font-extrabold tracking-tight text-transparent">RWA</span>
         </Link>
         <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
           {navItems.map((item) => {

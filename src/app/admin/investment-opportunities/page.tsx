@@ -22,8 +22,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import {
   Plus,
   Edit,
@@ -60,6 +62,8 @@ export default function AdminInvestmentOpportunitiesPage() {
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("basic");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -95,6 +99,7 @@ export default function AdminInvestmentOpportunitiesPage() {
   const [milestones, setMilestones] = useState<Omit<InvestmentOpportunityMilestone, "status">[]>([]);
   const [faqs, setFaqs] = useState<InvestmentOpportunityFAQ[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [tagsInput, setTagsInput] = useState<string>("");
 
   // Reset to page 1 when search changes
   useEffect(() => {
@@ -165,6 +170,7 @@ export default function AdminInvestmentOpportunitiesPage() {
     setMilestones([]);
     setFaqs([]);
     setTags([]);
+    setTagsInput("");
     setActiveTab("basic");
     setIsDialogOpen(true);
   };
@@ -182,48 +188,124 @@ export default function AdminInvestmentOpportunitiesPage() {
       setMilestones((detail.milestones || []).map(m => ({ date: m.date, description: m.description })));
       setFaqs(detail.faq || []);
       setTags(detail.tags || []);
+      setTagsInput((detail.tags || []).join(", "));
       setActiveTab("basic");
       setIsDialogOpen(true);
     } catch (err: any) {
       console.error("Failed to load opportunity details:", err);
       setError(err.message || "Failed to load opportunity details");
-      alert(err.message || "Failed to load opportunity details");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this investment opportunity?")) {
-      setIsLoading(true);
-      setError(null);
-      try {
-        await InvestmentOpportunitiesApi.deleteInvestmentOpportunity(id);
-        // Refresh the list
-        const response = await InvestmentOpportunitiesApi.getInvestmentOpportunities({
-          page: currentPage,
-          limit: ITEMS_PER_PAGE,
-        });
-        setItems(response.opportunities || []);
-        setFilteredItems(response.opportunities || []);
-        setPagination(response.pagination || pagination);
-      } catch (err: any) {
-        console.error("Failed to delete opportunity:", err);
-        setError(err.message || "Failed to delete investment opportunity");
-        alert(err.message || "Failed to delete investment opportunity");
-      } finally {
-        setIsLoading(false);
-      }
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      await InvestmentOpportunitiesApi.deleteInvestmentOpportunity(itemToDelete);
+      // Refresh the list
+      const response = await InvestmentOpportunitiesApi.getInvestmentOpportunities({
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+      });
+      setItems(response.opportunities || []);
+      setFilteredItems(response.opportunities || []);
+      setPagination(response.pagination || pagination);
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (err: any) {
+      console.error("Failed to delete opportunity:", err);
+      setError(err.message || "Failed to delete investment opportunity");
+      // Keep modal open on error so user can try again or cancel
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper function to validate URL
+  const isValidUrl = (url: string | undefined): boolean => {
+    if (!url || url.trim() === "") return false;
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
     }
   };
 
   const handleSave = async () => {
-    // Validate required fields
-    if (!formData.title || !formData.company || !formData.sector || !formData.type || 
-        !formData.location || !formData.description || !formData.rate || !formData.minInvestment ||
-        !formData.termMonths || !formData.totalFundingTarget || !formData.paymentFrequency ||
-        !formData.startDate || !formData.riskLevel || !formData.projectType || !formData.useOfFunds) {
-      alert("Please fill in all required fields");
+    // Validate required fields with detailed checking
+    const missingFields: string[] = [];
+    const validationErrors: string[] = [];
+    
+    // Title validation - must be at least 10 characters
+    if (!formData.title || formData.title.trim() === "") {
+      missingFields.push("Title");
+    } else if (formData.title.trim().length < 10) {
+      validationErrors.push("Title must be at least 10 characters long");
+    }
+    
+    if (!formData.company || formData.company.trim() === "") missingFields.push("Company");
+    if (!formData.sector || formData.sector.trim() === "") missingFields.push("Sector");
+    if (!formData.type || formData.type.trim() === "") missingFields.push("Type");
+    if (!formData.location || formData.location.trim() === "") missingFields.push("Location");
+    if (!formData.description || formData.description.trim() === "") missingFields.push("Description");
+    if (formData.rate === undefined || formData.rate === null || isNaN(formData.rate) || formData.rate <= 0) missingFields.push("Interest Rate");
+    if (formData.minInvestment === undefined || formData.minInvestment === null || isNaN(formData.minInvestment) || formData.minInvestment <= 0) missingFields.push("Min Investment");
+    if (formData.termMonths === undefined || formData.termMonths === null || isNaN(formData.termMonths) || formData.termMonths <= 0) missingFields.push("Term (Months)");
+    if (formData.totalFundingTarget === undefined || formData.totalFundingTarget === null || isNaN(formData.totalFundingTarget) || formData.totalFundingTarget <= 0) missingFields.push("Total Funding Target");
+    
+    // Check string fields - handle both undefined and empty strings
+    const checkStringField = (value: any, fieldName: string) => {
+      if (!value || (typeof value === "string" && value.trim() === "")) {
+        missingFields.push(fieldName);
+      }
+    };
+    
+    checkStringField(formData.sector, "Sector");
+    checkStringField(formData.paymentFrequency, "Payment Frequency");
+    checkStringField(formData.startDate, "Start Date");
+    checkStringField(formData.riskLevel, "Risk Level");
+    checkStringField(formData.projectType, "Project Type");
+    checkStringField(formData.useOfFunds, "Use of Funds");
+    
+    // Validate URL fields (only if they are provided)
+    if (formData.companyWebsite && !isValidUrl(formData.companyWebsite)) {
+      validationErrors.push("Company Website must be a valid URL (e.g., https://example.com)");
+    }
+    if (formData.thumbnailImage && !isValidUrl(formData.thumbnailImage)) {
+      validationErrors.push("Thumbnail Image must be a valid URL (e.g., https://example.com/image.jpg)");
+    }
+    if (formData.logo && !isValidUrl(formData.logo)) {
+      validationErrors.push("Logo must be a valid URL (e.g., https://example.com/logo.png)");
+    }
+    if (formData.videoUrl && !isValidUrl(formData.videoUrl)) {
+      validationErrors.push("Video URL must be a valid URL (e.g., https://example.com/video.mp4)");
+    }
+    
+    // Validate image URLs in the array
+    imageUrls.forEach((url, index) => {
+      if (url && url.trim() !== "" && !isValidUrl(url)) {
+        validationErrors.push(`Additional Image ${index + 1} must be a valid URL`);
+      }
+    });
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required fields:\n\n${missingFields.join("\n")}`);
+      return;
+    }
+    
+    if (validationErrors.length > 0) {
+      alert(`Please fix the following validation errors:\n\n${validationErrors.join("\n")}`);
       return;
     }
 
@@ -333,6 +415,7 @@ export default function AdminInvestmentOpportunitiesPage() {
     setMilestones([]);
     setFaqs([]);
     setTags([]);
+    setTagsInput("");
   };
 
   const getStatusColor = (status: string) => {
@@ -351,9 +434,7 @@ export default function AdminInvestmentOpportunitiesPage() {
   };
 
   const addArrayItem = (array: string[], setter: (items: string[]) => void, newItem: string) => {
-    if (newItem.trim()) {
-      setter([...array, newItem.trim()]);
-    }
+    setter([...array, newItem.trim()]);
   };
 
   const removeArrayItem = (array: string[], setter: (items: string[]) => void, index: number) => {
@@ -510,7 +591,13 @@ export default function AdminInvestmentOpportunitiesPage() {
                     value={formData.title || ""}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="Investment Opportunity Title"
+                    minLength={10}
                   />
+                  {formData.title && (
+                    <p className={`text-xs ${formData.title.trim().length < 10 ? "text-red-500" : "text-zinc-500"}`}>
+                      {formData.title.trim().length} / 10 characters minimum
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="company">Company *</Label>
@@ -529,21 +616,27 @@ export default function AdminInvestmentOpportunitiesPage() {
                   <Select
                     id="sector"
                     value={formData.sector || ""}
-                    options={uniqueSectors.length > 0 
-                      ? uniqueSectors.map(sector => ({ label: sector, value: sector }))
-                      : [
-                          { label: "Technology", value: "Technology" },
-                          { label: "Healthcare", value: "Healthcare" },
-                          { label: "Manufacturing", value: "Manufacturing" },
-                          { label: "Financial Services", value: "Financial Services" },
-                          { label: "Energy", value: "Energy" },
-                          { label: "Real Estate", value: "Real Estate" },
-                          { label: "Agriculture", value: "Agriculture" },
-                          { label: "Education", value: "Education" },
-                          { label: "Other", value: "Other" },
-                        ]
-                    }
-                    onValueChange={(value) => setFormData({ ...formData, sector: value })}
+                    options={[
+                      { label: "Select a sector...", value: "" },
+                      ...(uniqueSectors.length > 0 
+                        ? uniqueSectors.map(sector => ({ label: sector, value: sector }))
+                        : [
+                            { label: "Technology", value: "Technology" },
+                            { label: "Healthcare", value: "Healthcare" },
+                            { label: "Manufacturing", value: "Manufacturing" },
+                            { label: "Financial Services", value: "Financial Services" },
+                            { label: "Energy", value: "Energy" },
+                            { label: "Real Estate", value: "Real Estate" },
+                            { label: "Agriculture", value: "Agriculture" },
+                            { label: "Education", value: "Education" },
+                            { label: "Other", value: "Other" },
+                          ]
+                      )
+                    ]}
+                    onValueChange={(value) => {
+                      const sectorValue = value && value.trim() !== "" ? value : undefined;
+                      setFormData({ ...formData, sector: sectorValue });
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -604,15 +697,21 @@ export default function AdminInvestmentOpportunitiesPage() {
                   <Select
                     id="riskLevel"
                     value={formData.riskLevel || ""}
-                    options={uniqueRiskLevels.length > 0
-                      ? uniqueRiskLevels.map(level => ({ label: level, value: level }))
-                      : [
-                          { label: "Low", value: "Low" },
-                          { label: "Medium", value: "Medium" },
-                          { label: "High", value: "High" },
-                        ]
-                    }
-                    onValueChange={(value) => setFormData({ ...formData, riskLevel: value as InvestmentOpportunityRiskLevel })}
+                    options={[
+                      { label: "Select risk level...", value: "" },
+                      ...(uniqueRiskLevels.length > 0
+                        ? uniqueRiskLevels.map(level => ({ label: level, value: level }))
+                        : [
+                            { label: "Low", value: "Low" },
+                            { label: "Medium", value: "Medium" },
+                            { label: "High", value: "High" },
+                          ]
+                      )
+                    ]}
+                    onValueChange={(value) => {
+                      const riskLevelValue = value && value.trim() !== "" ? (value as InvestmentOpportunityRiskLevel) : undefined;
+                      setFormData({ ...formData, riskLevel: riskLevelValue });
+                    }}
                   />
                 </div>
               </div>
@@ -620,20 +719,20 @@ export default function AdminInvestmentOpportunitiesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date *</Label>
-                  <Input
+                  <DatePicker
                     id="startDate"
-                    type="date"
                     value={formData.startDate || ""}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    onChange={(value) => setFormData({ ...formData, startDate: value })}
+                    placeholder="Select start date"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date</Label>
-                  <Input
+                  <DatePicker
                     id="endDate"
-                    type="date"
                     value={formData.endDate || ""}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    onChange={(value) => setFormData({ ...formData, endDate: value })}
+                    placeholder="Select end date"
                   />
                 </div>
               </div>
@@ -685,7 +784,10 @@ export default function AdminInvestmentOpportunitiesPage() {
                     min="0"
                     max="100"
                     value={formData.rate || ""}
-                    onChange={(e) => setFormData({ ...formData, rate: parseFloat(e.target.value) })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, rate: val === "" ? undefined : parseFloat(val) });
+                    }}
                     placeholder="7.5"
                   />
                 </div>
@@ -696,7 +798,10 @@ export default function AdminInvestmentOpportunitiesPage() {
                     type="number"
                     min="1"
                     value={formData.termMonths || ""}
-                    onChange={(e) => setFormData({ ...formData, termMonths: parseInt(e.target.value) })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, termMonths: val === "" ? undefined : parseInt(val) });
+                    }}
                     placeholder="36"
                   />
                 </div>
@@ -705,8 +810,14 @@ export default function AdminInvestmentOpportunitiesPage() {
                   <Select
                     id="paymentFrequency"
                     value={formData.paymentFrequency || ""}
-                    options={uniquePaymentFrequencies.map(freq => ({ label: freq, value: freq }))}
-                    onValueChange={(value) => setFormData({ ...formData, paymentFrequency: value as PaymentFrequency })}
+                    options={[
+                      { label: "Select payment frequency...", value: "" },
+                      ...uniquePaymentFrequencies.map(freq => ({ label: freq, value: freq }))
+                    ]}
+                    onValueChange={(value) => {
+                      const paymentFrequencyValue = value && value.trim() !== "" ? (value as PaymentFrequency) : undefined;
+                      setFormData({ ...formData, paymentFrequency: paymentFrequencyValue });
+                    }}
                   />
                 </div>
               </div>
@@ -720,7 +831,10 @@ export default function AdminInvestmentOpportunitiesPage() {
                     min="0"
                     step="0.01"
                     value={formData.minInvestment || ""}
-                    onChange={(e) => setFormData({ ...formData, minInvestment: parseFloat(e.target.value) })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, minInvestment: val === "" ? undefined : parseFloat(val) });
+                    }}
                     placeholder="100"
                   />
                 </div>
@@ -744,7 +858,10 @@ export default function AdminInvestmentOpportunitiesPage() {
                     min="0"
                     step="0.01"
                     value={formData.totalFundingTarget || ""}
-                    onChange={(e) => setFormData({ ...formData, totalFundingTarget: parseFloat(e.target.value) })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, totalFundingTarget: val === "" ? undefined : parseFloat(val) });
+                    }}
                     placeholder="1000000"
                   />
                 </div>
@@ -823,6 +940,9 @@ export default function AdminInvestmentOpportunitiesPage() {
                     onChange={(e) => setFormData({ ...formData, companyWebsite: e.target.value })}
                     placeholder="https://example.com"
                   />
+                  {formData.companyWebsite && formData.companyWebsite.trim() !== "" && !isValidUrl(formData.companyWebsite) && (
+                    <p className="text-xs text-red-500">Please enter a valid URL (e.g., https://example.com)</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="companyAddress">Company Address</Label>
@@ -943,10 +1063,37 @@ export default function AdminInvestmentOpportunitiesPage() {
               <div className="space-y-2">
                 <Label>Tags (comma-separated)</Label>
                 <Input
-                  value={tags.join(", ")}
-                  onChange={(e) => setTags(e.target.value.split(",").map(t => t.trim()).filter(t => t))}
+                  value={tagsInput}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    setTagsInput(inputValue);
+                    // Update tags array by parsing complete tags (separated by commas)
+                    const parsedTags = inputValue
+                      .split(",")
+                      .map(t => t.trim())
+                      .filter(t => t.length > 0);
+                    setTags(parsedTags);
+                  }}
+                  onBlur={(e) => {
+                    // On blur, ensure the input shows all tags cleanly
+                    const parsedTags = e.target.value
+                      .split(",")
+                      .map(t => t.trim())
+                      .filter(t => t.length > 0);
+                    setTagsInput(parsedTags.join(", "));
+                    setTags(parsedTags);
+                  }}
                   placeholder="tag1, tag2, tag3"
                 />
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
@@ -961,6 +1108,9 @@ export default function AdminInvestmentOpportunitiesPage() {
                   onChange={(e) => setFormData({ ...formData, thumbnailImage: e.target.value })}
                   placeholder="https://example.com/image.jpg"
                 />
+                {formData.thumbnailImage && formData.thumbnailImage.trim() !== "" && !isValidUrl(formData.thumbnailImage) && (
+                  <p className="text-xs text-red-500">Please enter a valid URL (e.g., https://example.com/image.jpg)</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -972,31 +1122,39 @@ export default function AdminInvestmentOpportunitiesPage() {
                   onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
                   placeholder="https://example.com/logo.png"
                 />
+                {formData.logo && formData.logo.trim() !== "" && !isValidUrl(formData.logo) && (
+                  <p className="text-xs text-red-500">Please enter a valid URL (e.g., https://example.com/logo.png)</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label>Additional Images</Label>
                 <div className="space-y-2">
                   {imageUrls.map((url, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        type="url"
-                        value={url}
-                        onChange={(e) => {
-                          const updated = [...imageUrls];
-                          updated[index] = e.target.value;
-                          setImageUrls(updated);
-                        }}
-                        placeholder="https://example.com/image.jpg"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeArrayItem(imageUrls, setImageUrls, index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                    <div key={index} className="space-y-1">
+                      <div className="flex gap-2">
+                        <Input
+                          type="url"
+                          value={url}
+                          onChange={(e) => {
+                            const updated = [...imageUrls];
+                            updated[index] = e.target.value;
+                            setImageUrls(updated);
+                          }}
+                          placeholder="https://example.com/image.jpg"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeArrayItem(imageUrls, setImageUrls, index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {url && url.trim() !== "" && !isValidUrl(url) && (
+                        <p className="text-xs text-red-500">Please enter a valid URL (e.g., https://example.com/image.jpg)</p>
+                      )}
                     </div>
                   ))}
                   <Button
@@ -1019,6 +1177,9 @@ export default function AdminInvestmentOpportunitiesPage() {
                   onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
                   placeholder="https://example.com/video.mp4 or YouTube/Vimeo URL"
                 />
+                {formData.videoUrl && formData.videoUrl.trim() !== "" && !isValidUrl(formData.videoUrl) && (
+                  <p className="text-xs text-red-500">Please enter a valid URL (e.g., https://example.com/video.mp4)</p>
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -1033,6 +1194,15 @@ export default function AdminInvestmentOpportunitiesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={confirmDelete}
+        title="Delete Investment Opportunity"
+        description="Are you sure you want to delete this investment opportunity? This action cannot be undone."
+        isLoading={isLoading}
+      />
     </div>
   );
 }

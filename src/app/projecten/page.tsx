@@ -13,6 +13,9 @@ export default function ProjectenPage() {
   const [status, setStatus] = useState<string>("all");
   const [location, setLocation] = useState<string>("all");
 
+  // Fetch all projects for dropdown options (always fetch this)
+  const { projects: allProjects, isLoading: isLoadingAll } = useProjects(undefined);
+
   // Build API filters
   const apiFilters = useMemo(() => {
     const filters: any = {};
@@ -22,12 +25,35 @@ export default function ProjectenPage() {
     return filters;
   }, [type, status, location]);
 
-  const { projects, isLoading } = useProjects(Object.keys(apiFilters).length > 0 ? apiFilters : undefined);
+  // Determine if we should fetch filtered projects
+  const hasFilters = Object.keys(apiFilters).length > 0;
+  
+  // Fetch filtered projects only when filters are applied
+  // Use a special key when no filters to avoid cache conflicts
+  const { projects: filteredProjects, isLoading: isLoadingFiltered } = useProjects(
+    hasFilters ? apiFilters : undefined
+  );
+
+  // Use filtered projects when filters are applied, otherwise use all projects
+  // Explicitly check hasFilters to ensure we use the right data source
+  const projects = useMemo(() => {
+    if (hasFilters) {
+      return filteredProjects || [];
+    }
+    return allProjects || [];
+  }, [hasFilters, filteredProjects, allProjects]);
+  
+  const isLoading = hasFilters ? isLoadingFiltered : isLoadingAll;
+
+  const uniqueTypes = useMemo(() => {
+    const set = new Set(allProjects.map((p) => p.type));
+    return Array.from(set);
+  }, [allProjects]);
 
   const uniqueLocations = useMemo(() => {
-    const set = new Set(projects.map((p) => p.location));
+    const set = new Set(allProjects.map((p) => p.location));
     return Array.from(set);
-  }, [projects]);
+  }, [allProjects]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-zinc-50 to-white dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
@@ -60,31 +86,23 @@ export default function ProjectenPage() {
           className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3"
         >
           <Select
-            options={[
-              { label: "All types", value: "all" },
-              { label: "Technology", value: "Technology" },
-              { label: "Healthcare", value: "Healthcare" },
-              { label: "Manufacturing", value: "Manufacturing" },
-              { label: "Financial Services", value: "Financial Services" },
-              { label: "Energy", value: "Energy" },
-              { label: "Real Estate", value: "Real Estate" },
-            ]}
-            defaultValue="all"
+            options={[{ label: "All types", value: "all" }, ...uniqueTypes.map((t) => ({ label: t, value: t }))]}
+            value={type}
             onValueChange={setType}
           />
           <Select
             options={[
               { label: "All statuses", value: "all" },
-              { label: "In development", value: "In development" },
-              { label: "Live", value: "Live" },
-              { label: "Completed", value: "Completed" },
+              { label: "Active", value: "ACTIVE" },
+              { label: "Cancelled", value: "CANCELLED" },
+              { label: "Completed", value: "COMPLETED" },
             ]}
-            defaultValue="all"
+            value={status}
             onValueChange={setStatus}
           />
           <Select
             options={[{ label: "All locations", value: "all" }, ...uniqueLocations.map((l) => ({ label: l, value: l }))]}
-            defaultValue="all"
+            value={location}
             onValueChange={setLocation}
           />
         </motion.div>

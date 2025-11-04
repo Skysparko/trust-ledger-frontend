@@ -89,7 +89,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 blur-sm group-hover:blur-md transition-all" />
               <Image 
                 src="/globe.svg" 
-                alt="TrustLedger" 
+                alt="RWA" 
                 width={28} 
                 height={28} 
                 className="relative z-10 opacity-90 group-hover:opacity-100 transition-opacity"
@@ -97,7 +97,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             </div>
             <div className="flex flex-col">
               <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
-                TrustLedger
+                RWA
               </span>
               <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
                 Portal

@@ -107,7 +107,7 @@ export class PublicApi extends BaseApi {
    */
   static async getProjects(filters?: {
     type?: string;
-    status?: "In development" | "Live" | "Completed";
+    status?: "ACTIVE" | "CANCELLED" | "COMPLETED";
     location?: string;
   }): Promise<any[]> {
     const params = filters ? new URLSearchParams(filters as any).toString() : "";

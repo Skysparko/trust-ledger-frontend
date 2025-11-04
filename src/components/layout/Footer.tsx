@@ -19,7 +19,7 @@ export function Footer() {
     <footer className="border-t border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-12 md:grid-cols-4">
         <div className="space-y-3">
-          <div className="text-lg font-semibold">TrustLedger</div>
+          <div className="text-lg font-semibold">RWA</div>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Investment opportunities made accessible to everyone.
           </p>
@@ -70,7 +70,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-zinc-200 py-4 text-center text-xs text-zinc-500 dark:border-zinc-800">
-        © {new Date().getFullYear()} TrustLedger BV. All rights reserved.
+        © {new Date().getFullYear()} RWA BV. All rights reserved.
       </div>
     </footer>
   );

@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useAdminWebinars, useCreateWebinar, useUpdateWebinar, useDeleteWebinar } from "@/hooks/swr/useAdmin";
 import type { AdminWebinar } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
@@ -33,6 +35,8 @@ export default function AdminWebinarsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AdminWebinar | null>(null);
   const [formData, setFormData] = useState<Partial<AdminWebinar>>({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const { webinars: filteredItems, isLoading, mutate } = useAdminWebinars({
     search: searchQuery || undefined,
@@ -60,14 +64,22 @@ export default function AdminWebinarsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this webinar?")) {
-      try {
-        await deleteWebinar({ id });
-        mutate();
-      } catch (error) {
-        console.error("Failed to delete webinar:", error);
-      }
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      await deleteWebinar({ id: itemToDelete });
+      mutate();
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete webinar:", error);
+      throw error;
     }
   };
 
@@ -243,11 +255,11 @@ export default function AdminWebinarsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
-                <Input
+                <DatePicker
                   id="date"
-                  type="date"
                   value={formData.date || ""}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, date: value })}
+                  placeholder="Select a date"
                 />
               </div>
             </div>
@@ -262,6 +274,15 @@ export default function AdminWebinarsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={confirmDelete}
+        title="Delete Webinar"
+        description="Are you sure you want to delete this webinar? This action cannot be undone."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

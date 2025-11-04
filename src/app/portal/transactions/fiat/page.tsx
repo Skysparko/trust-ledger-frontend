@@ -1,10 +1,19 @@
 "use client";
 
+import { useState } from "react";
+import { Copy, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserTransactions } from "@/hooks/swr/useUser";
 
 export default function TransactionsFiatPage() {
   const { transactions, isLoading, isError, error } = useUserTransactions();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function copyTransactionId(id: string) {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -102,7 +111,22 @@ export default function TransactionsFiatPage() {
                           {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs text-zinc-400">{transaction.id}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs text-zinc-400">{transaction.id}</span>
+                          <button
+                            onClick={() => copyTransactionId(transaction.id)}
+                            className="text-zinc-400 hover:text-zinc-300 transition-colors p-1"
+                            title="Copy transaction ID"
+                          >
+                            {copiedId === transaction.id ? (
+                              <Check className="h-4 w-4 text-green-400" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
