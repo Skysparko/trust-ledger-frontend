@@ -194,6 +194,8 @@ export type CreateAdminPostPayload = {
   title: string;
   content: string;
   category: "NEWS" | "KNOWLEDGE";
+  date?: string;
+  excerpt?: string;
   isPublished: boolean;
   tags?: string[];
 };

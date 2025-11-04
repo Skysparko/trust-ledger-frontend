@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useAdminWebinars, useCreateWebinar, useUpdateWebinar, useDeleteWebinar } from "@/hooks/swr/useAdmin";
 import type { AdminWebinar } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
@@ -243,11 +244,11 @@ export default function AdminWebinarsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
-                <Input
+                <DatePicker
                   id="date"
-                  type="date"
                   value={formData.date || ""}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, date: value })}
+                  placeholder="Select a date"
                 />
               </div>
             </div>

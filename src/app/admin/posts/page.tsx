@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useAdminPosts, useCreatePost, useUpdatePost, useDeletePost } from "@/hooks/swr/useAdmin";
 import type { AdminPost, UpdateAdminPostPayload } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
@@ -89,12 +90,40 @@ export default function AdminPostsPage() {
         }
         if (formData.isPublished !== undefined) payload.isPublished = formData.isPublished;
         if (formData.tags) payload.tags = formData.tags;
+        if (formData.excerpt) payload.excerpt = formData.excerpt;
+        if (formData.date) {
+          // Convert date to ISO format if needed
+          if (formData.date.includes('T')) {
+            payload.date = formData.date;
+          } else {
+            const [year, month, day] = formData.date.split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0));
+            payload.date = date.toISOString();
+          }
+        }
         await updatePost({ id: editingItem.id, payload });
       } else {
+        // Convert date to ISO string format if provided
+        let dateValue: string | undefined;
+        if (formData.date) {
+          // If date is already in ISO format, use it; otherwise convert
+          if (formData.date.includes('T')) {
+            dateValue = formData.date;
+          } else {
+            // Convert "yyyy-MM-dd" format to ISO string with time
+            // Parse as UTC to avoid timezone issues
+            const [year, month, day] = formData.date.split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1, day, 10, 0, 0, 0));
+            dateValue = date.toISOString();
+          }
+        }
+        
         await createPost({
           title: formData.title || "",
           content: formData.content || "",
           category: (formData.category as any) || "NEWS",
+          date: dateValue,
+          excerpt: formData.excerpt,
           isPublished: formData.isPublished ?? true,
           tags: formData.tags,
         });
@@ -246,13 +275,23 @@ export default function AdminPostsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
-                <Input
+                <DatePicker
                   id="date"
-                  type="date"
                   value={formData.date || ""}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, date: value })}
+                  placeholder="Select a date"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="excerpt">Excerpt</Label>
+              <textarea
+                id="excerpt"
+                className="w-full min-h-[80px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                value={formData.excerpt || ""}
+                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                placeholder="Brief description of the post..."
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="content">Content</Label>
@@ -262,6 +301,18 @@ export default function AdminPostsPage() {
                 value={formData.content || ""}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isPublished"
+                checked={formData.isPublished ?? true}
+                onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <Label htmlFor="isPublished" className="cursor-pointer">
+                Publish immediately
+              </Label>
             </div>
           </div>
           <DialogFooter>
