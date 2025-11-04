@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useAdminDocuments, useUploadDocument, useDeleteDocument } from "@/hooks/swr/useAdmin";
 import { AdminApi } from "@/api/admin.api";
 import { Upload, Download, Search, FileText, Trash2 } from "lucide-react";
@@ -22,6 +23,8 @@ const ITEMS_PER_PAGE = 10;
 export default function AdminDocumentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   
   const { documents: filteredItems, isLoading, mutate } = useAdminDocuments({
     search: searchQuery || undefined,
@@ -70,14 +73,22 @@ export default function AdminDocumentsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this document?")) {
-      try {
-        await deleteDocument({ id });
-        mutate();
-      } catch (error) {
-        console.error("Failed to delete document:", error);
-      }
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      await deleteDocument({ id: itemToDelete });
+      mutate();
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete document:", error);
+      throw error;
     }
   };
 
@@ -226,6 +237,15 @@ export default function AdminDocumentsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={confirmDelete}
+        title="Delete Document"
+        description="Are you sure you want to delete this document? This action cannot be undone."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

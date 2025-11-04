@@ -25,6 +25,7 @@ import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import {
   Plus,
   Edit,
@@ -61,6 +62,8 @@ export default function AdminInvestmentOpportunitiesPage() {
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("basic");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -188,33 +191,40 @@ export default function AdminInvestmentOpportunitiesPage() {
     } catch (err: any) {
       console.error("Failed to load opportunity details:", err);
       setError(err.message || "Failed to load opportunity details");
-      alert(err.message || "Failed to load opportunity details");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this investment opportunity?")) {
-      setIsLoading(true);
-      setError(null);
-      try {
-        await InvestmentOpportunitiesApi.deleteInvestmentOpportunity(id);
-        // Refresh the list
-        const response = await InvestmentOpportunitiesApi.getInvestmentOpportunities({
-          page: currentPage,
-          limit: ITEMS_PER_PAGE,
-        });
-        setItems(response.opportunities || []);
-        setFilteredItems(response.opportunities || []);
-        setPagination(response.pagination || pagination);
-      } catch (err: any) {
-        console.error("Failed to delete opportunity:", err);
-        setError(err.message || "Failed to delete investment opportunity");
-        alert(err.message || "Failed to delete investment opportunity");
-      } finally {
-        setIsLoading(false);
-      }
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      await InvestmentOpportunitiesApi.deleteInvestmentOpportunity(itemToDelete);
+      // Refresh the list
+      const response = await InvestmentOpportunitiesApi.getInvestmentOpportunities({
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+      });
+      setItems(response.opportunities || []);
+      setFilteredItems(response.opportunities || []);
+      setPagination(response.pagination || pagination);
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (err: any) {
+      console.error("Failed to delete opportunity:", err);
+      setError(err.message || "Failed to delete investment opportunity");
+      // Keep modal open on error so user can try again or cancel
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1153,6 +1163,15 @@ export default function AdminInvestmentOpportunitiesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={confirmDelete}
+        title="Delete Investment Opportunity"
+        description="Are you sure you want to delete this investment opportunity? This action cannot be undone."
+        isLoading={isLoading}
+      />
     </div>
   );
 }

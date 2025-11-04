@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useAdminPosts, useCreatePost, useUpdatePost, useDeletePost } from "@/hooks/swr/useAdmin";
 import type { AdminPost, UpdateAdminPostPayload } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
@@ -35,6 +36,8 @@ export default function AdminPostsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AdminPost | null>(null);
   const [formData, setFormData] = useState<Partial<AdminPost>>({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const { posts: filteredItems, isLoading, mutate } = useAdminPosts({
     search: searchQuery || undefined,
@@ -63,14 +66,22 @@ export default function AdminPostsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this post?")) {
-      try {
-        await deletePost({ id });
-        mutate();
-      } catch (error) {
-        console.error("Failed to delete post:", error);
-      }
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      await deletePost({ id: itemToDelete });
+      mutate();
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      throw error;
     }
   };
 
@@ -325,6 +336,15 @@ export default function AdminPostsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={confirmDelete}
+        title="Delete Post"
+        description="Are you sure you want to delete this post? This action cannot be undone."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

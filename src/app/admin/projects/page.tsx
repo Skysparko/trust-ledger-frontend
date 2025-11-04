@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useAdminProjects, useAdminCreateProject, useAdminUpdateProject, useAdminDeleteProject } from "@/hooks/swr/useAdmin";
 import type { AdminProject } from "@/api/admin.api";
 import { Plus, Edit, Trash2, Search } from "lucide-react";
@@ -35,6 +36,8 @@ export default function AdminProjectsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AdminProject | null>(null);
   const [formData, setFormData] = useState<Partial<AdminProject>>({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const { projects: filteredItems, isLoading, mutate } = useAdminProjects({
     search: searchQuery || undefined,
@@ -62,14 +65,22 @@ export default function AdminProjectsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this project?")) {
-      try {
-        await deleteProject({ id });
-        mutate();
-      } catch (error) {
-        console.error("Failed to delete project:", error);
-      }
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      await deleteProject({ id: itemToDelete });
+      mutate();
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+      throw error;
     }
   };
 
@@ -288,6 +299,15 @@ export default function AdminProjectsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={confirmDelete}
+        title="Delete Project"
+        description="Are you sure you want to delete this project? This action cannot be undone."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
