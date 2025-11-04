@@ -42,7 +42,7 @@ This project uses environment variables for configuration. Follow these steps to
 #### `NEXT_PUBLIC_APP_NAME`
 - **Description**: Application name
 - **Type**: String
-- **Default**: `Trust Ledger`
+- **Default**: `RWA`
 - **Usage**: Can be used for branding or metadata
 
 ## File Structure

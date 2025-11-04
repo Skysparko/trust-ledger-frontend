@@ -67,7 +67,7 @@ export default function SignupPage() {
         <Link href="/" className="inline-flex items-center gap-2 transition-opacity hover:opacity-80">
           <Image src="/globe.svg" alt="Logo" width={32} height={32} />
           <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
-            TrustLedger
+            RWA
           </span>
         </Link>
       </div>
@@ -105,7 +105,7 @@ export default function SignupPage() {
             >
               Join{" "}
               <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                TrustLedger
+                RWA
               </span>
             </motion.h1>
             <motion.p

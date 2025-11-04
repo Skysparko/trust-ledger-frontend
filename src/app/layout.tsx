@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TrustLedger – Investment Platform",
+  title: "RWA – Investment Platform",
   description: "Invest in companies with transparent returns and build your portfolio.",
 };
 
