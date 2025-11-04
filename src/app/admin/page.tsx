@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminStats } from "@/hooks/swr/useAdmin";
-import { Users, TrendingUp, Euro, FileText } from "lucide-react";
+import { Users, TrendingUp, DollarSign, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 export default function AdminDashboardPage() {
@@ -33,8 +33,8 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Amount Raised",
-      value: `€${(stats.amountRaised / 1000000).toFixed(1)}M`,
-      icon: Euro,
+      value: `$${(stats.amountRaised / 1000000).toFixed(1)}M`,
+      icon: DollarSign,
       trend: "+15%",
       color: "text-purple-600 dark:text-purple-400",
     },

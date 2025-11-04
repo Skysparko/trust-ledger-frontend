@@ -97,7 +97,7 @@ export default function TransactionsFiatPage() {
                         </span>
                       </td>
                       <td className={`px-6 py-4 font-semibold ${transaction.type === "deposit" || transaction.type === "refund" ? "text-green-400" : "text-red-400"}`}>
-                        {transaction.type === "deposit" || transaction.type === "refund" ? "+" : "-"}€ {Math.abs(transaction.amount).toLocaleString()}
+                        {transaction.type === "deposit" || transaction.type === "refund" ? "+" : "-"}$ {Math.abs(transaction.amount).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 text-zinc-400">{transaction.currency}</td>
                       <td className="px-6 py-4">

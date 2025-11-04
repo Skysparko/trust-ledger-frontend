@@ -513,7 +513,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                       <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      €{(item.currentFunding / 1000).toFixed(0)}K / €{(item.totalFundingTarget / 1000).toFixed(0)}K
+                      ${(item.currentFunding / 1000).toFixed(0)}K / ${(item.totalFundingTarget / 1000).toFixed(0)}K
                       <span className="text-xs text-zinc-500 ml-1">
                         ({item.fundingProgress.toFixed(1)}%)
                       </span>
@@ -825,7 +825,7 @@ export default function AdminInvestmentOpportunitiesPage() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="minInvestment">Min Investment (€) *</Label>
+                  <Label htmlFor="minInvestment">Min Investment ($) *</Label>
                   <Input
                     id="minInvestment"
                     type="number"
@@ -840,7 +840,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="maxInvestment">Max Investment (€)</Label>
+                  <Label htmlFor="maxInvestment">Max Investment ($)</Label>
                   <Input
                     id="maxInvestment"
                     type="number"
@@ -852,7 +852,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="totalFundingTarget">Total Target (€) *</Label>
+                  <Label htmlFor="totalFundingTarget">Total Target ($) *</Label>
                   <Input
                     id="totalFundingTarget"
                     type="number"

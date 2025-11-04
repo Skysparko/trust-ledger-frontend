@@ -273,7 +273,7 @@ export default function TransactionDetailPage() {
             <div>
               <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Amount</p>
               <p className="text-2xl font-bold mt-1">
-                €{Math.abs(transaction.amount || investment?.amount || 0).toLocaleString()}
+                ${Math.abs(transaction.amount || investment?.amount || 0).toLocaleString()}
               </p>
             </div>
             <div>
@@ -543,7 +543,7 @@ export default function TransactionDetailPage() {
                 <div>
                   <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Amount</p>
                   <p className="text-2xl font-bold mt-1">
-                    €{Math.abs(investment?.amount || transaction.amount || 0).toLocaleString()}
+                    ${Math.abs(investment?.amount || transaction.amount || 0).toLocaleString()}
                   </p>
                 </div>
                 <div>
@@ -674,19 +674,19 @@ export default function TransactionDetailPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Min Investment</p>
-                      <p className="text-lg">€{investmentOpportunity.minInvestment?.toLocaleString() || "-"}</p>
+                      <p className="text-lg">${investmentOpportunity.minInvestment?.toLocaleString() || "-"}</p>
                     </div>
                     {investmentOpportunity.maxInvestment !== undefined &&
                       investmentOpportunity.maxInvestment !== null && (
                         <div>
                           <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Max Investment</p>
-                          <p className="text-lg">€{investmentOpportunity.maxInvestment.toLocaleString()}</p>
+                          <p className="text-lg">${investmentOpportunity.maxInvestment.toLocaleString()}</p>
                         </div>
                       )}
                     <div>
                       <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Funding Target</p>
                       <p className="text-lg">
-                        €{investmentOpportunity.totalFundingTarget?.toLocaleString() || "-"}
+                        ${investmentOpportunity.totalFundingTarget?.toLocaleString() || "-"}
                       </p>
                     </div>
                     {investmentOpportunity.currentFunding !== undefined &&
@@ -694,7 +694,7 @@ export default function TransactionDetailPage() {
                         <div>
                           <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Current Funding</p>
                           <p className="text-lg">
-                            €{investmentOpportunity.currentFunding.toLocaleString()} (
+                            ${investmentOpportunity.currentFunding.toLocaleString()} (
                             {investmentOpportunity.totalFundingTarget
                               ? Math.round(
                                   (investmentOpportunity.currentFunding / investmentOpportunity.totalFundingTarget) *
@@ -974,7 +974,7 @@ export default function TransactionDetailPage() {
                           <div>
                             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Average Investment</p>
                             <p className="text-2xl font-bold">
-                              €{investmentOpportunity.averageInvestment.toLocaleString()}
+                              ${investmentOpportunity.averageInvestment.toLocaleString()}
                             </p>
                           </div>
                         )}
@@ -983,7 +983,7 @@ export default function TransactionDetailPage() {
                           <div>
                             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Median Investment</p>
                             <p className="text-2xl font-bold">
-                              €{investmentOpportunity.medianInvestment.toLocaleString()}
+                              ${investmentOpportunity.medianInvestment.toLocaleString()}
                             </p>
                           </div>
                         )}
@@ -992,7 +992,7 @@ export default function TransactionDetailPage() {
                           <div>
                             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Largest Investment</p>
                             <p className="text-2xl font-bold">
-                              €{investmentOpportunity.largestInvestment.toLocaleString()}
+                              ${investmentOpportunity.largestInvestment.toLocaleString()}
                             </p>
                           </div>
                         )}

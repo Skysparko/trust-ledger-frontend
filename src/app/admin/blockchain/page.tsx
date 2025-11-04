@@ -263,7 +263,7 @@ export default function AdminBlockchainPage() {
                       <div className="font-medium">{inv.dbBonds}</div>
                       <div className="text-xs text-zinc-500">Database</div>
                     </TableCell>
-                    <TableCell>€{inv.dbAmount.toLocaleString()}</TableCell>
+                    <TableCell>${inv.dbAmount.toLocaleString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs">{formatAddress(inv.contractAddress)}</span>

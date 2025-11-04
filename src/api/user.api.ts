@@ -186,7 +186,7 @@ export class UserApi extends BaseApi {
   /**
    * Create new investment
    * POST /api/user/investments
-   * Note: amount is calculated as bonds * 100 (€100 per bond)
+   * Note: amount is calculated as bonds * 100 ($100 per bond)
    * Investment must meet minimum and maximum investment requirements of the investment opportunity
    */
   static async createInvestment(payload: CreateUserInvestmentPayload): Promise<UserInvestment> {

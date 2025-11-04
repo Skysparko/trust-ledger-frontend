@@ -97,7 +97,7 @@ export function InvestmentOpportunityCard({ opportunity }: { opportunity: Invest
             </div>
             <div className="rounded-lg bg-zinc-800/30 p-3 border border-zinc-700/50">
               <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1">Min. invest</div>
-              <div className="text-lg font-bold text-white">€{(opportunity.minInvestment / 1000).toFixed(0)}K</div>
+              <div className="text-lg font-bold text-white">${(opportunity.minInvestment / 1000).toFixed(0)}K</div>
             </div>
           </div>
 
@@ -118,10 +118,10 @@ export function InvestmentOpportunityCard({ opportunity }: { opportunity: Invest
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-zinc-500">
-                €{(opportunity.currentFunding / 1000).toFixed(0)}K raised
+                ${(opportunity.currentFunding / 1000).toFixed(0)}K raised
               </span>
               <span className="text-zinc-500">
-                €{(opportunity.totalFundingTarget / 1000).toFixed(0)}K target
+                ${(opportunity.totalFundingTarget / 1000).toFixed(0)}K target
               </span>
             </div>
           </div>

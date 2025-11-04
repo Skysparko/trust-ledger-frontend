@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MapPin, Calendar, Euro, TrendingUp, Building2, Users, Shield, FileText, Clock, CheckCircle2, Info, Globe, AlertTriangle } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, DollarSign, TrendingUp, Building2, Users, Shield, FileText, Clock, CheckCircle2, Info, Globe, AlertTriangle } from "lucide-react";
 import { useMemo } from "react";
 import { useInvestmentOpportunity } from "@/hooks/swr/useInvestmentOpportunities";
 import { motion } from "framer-motion";
@@ -185,11 +185,11 @@ export default function InvestmentOpportunityDetailPage() {
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">Total Raised</div>
-                    <div className="text-lg font-bold text-zinc-900 dark:text-white">€{opportunity.currentFunding.toLocaleString()}</div>
+                    <div className="text-lg font-bold text-zinc-900 dark:text-white">${opportunity.currentFunding.toLocaleString()}</div>
                   </div>
                   <div>
                     <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">Target</div>
-                    <div className="text-lg font-bold text-zinc-900 dark:text-white">€{opportunity.totalFundingTarget.toLocaleString()}</div>
+                    <div className="text-lg font-bold text-zinc-900 dark:text-white">${opportunity.totalFundingTarget.toLocaleString()}</div>
                   </div>
                 </div>
                 {opportunity.endDate && (
@@ -243,10 +243,10 @@ export default function InvestmentOpportunityDetailPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400 mb-2">
-                        <Euro className="h-4 w-4" />
+                        <DollarSign className="h-4 w-4" />
                         Minimum Investment
                       </div>
-                      <div className="text-2xl font-bold text-zinc-900 dark:text-white">€{opportunity.minInvestment.toLocaleString()}</div>
+                      <div className="text-2xl font-bold text-zinc-900 dark:text-white">${opportunity.minInvestment.toLocaleString()}</div>
                       <div className="text-xs text-zinc-500 dark:text-zinc-500">Per investor</div>
                     </div>
                     <div className="space-y-1">
@@ -260,10 +260,10 @@ export default function InvestmentOpportunityDetailPage() {
                     {opportunity.maxInvestment && (
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400 mb-2">
-                          <Euro className="h-4 w-4" />
+                          <DollarSign className="h-4 w-4" />
                           Maximum Investment
                         </div>
-                        <div className="text-2xl font-bold text-zinc-900 dark:text-white">€{opportunity.maxInvestment.toLocaleString()}</div>
+                        <div className="text-2xl font-bold text-zinc-900 dark:text-white">${opportunity.maxInvestment.toLocaleString()}</div>
                         <div className="text-xs text-zinc-500 dark:text-zinc-500">Per investor</div>
                       </div>
                     )}
@@ -604,7 +604,7 @@ export default function InvestmentOpportunityDetailPage() {
                       <TrendingUp className="h-4 w-4" />
                       Average Investment
                     </div>
-                    <div className="text-2xl font-bold text-zinc-900 dark:text-white">€{investorsCount > 0 ? (totalAmount / investorsCount).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '0'}</div>
+                    <div className="text-2xl font-bold text-zinc-900 dark:text-white">${investorsCount > 0 ? (totalAmount / investorsCount).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '0'}</div>
                   </div>
                 </CardContent>
               </Card>

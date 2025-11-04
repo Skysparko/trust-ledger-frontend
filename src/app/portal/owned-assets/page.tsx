@@ -21,7 +21,7 @@ export default function OwnedAssetsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-5xl font-extrabold text-white">€ {totalValue.toLocaleString()}</div>
+          <div className="text-5xl font-extrabold text-white">$ {totalValue.toLocaleString()}</div>
         </CardContent>
       </Card>
 
@@ -81,7 +81,7 @@ export default function OwnedAssetsPage() {
                       <td className="px-6 py-4 font-medium text-white">{asset.name ?? asset.issuanceName ?? "N/A"}</td>
                       <td className="px-6 py-4 text-zinc-400">{asset.type ?? "Bond"}</td>
                       <td className="px-6 py-4 font-semibold text-white">{(asset.quantity ?? asset.bonds ?? 0).toLocaleString()}</td>
-                      <td className="px-6 py-4 font-semibold text-white">€ {(asset.value ?? asset.totalValue ?? 0).toLocaleString()}</td>
+                      <td className="px-6 py-4 font-semibold text-white">$ {(asset.value ?? asset.totalValue ?? 0).toLocaleString()}</td>
                       <td className="px-6 py-4 text-zinc-400">
                         {(() => {
                           const dateStr = asset.dateAcquired ?? asset.purchaseDate;

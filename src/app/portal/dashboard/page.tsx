@@ -306,7 +306,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-medium text-zinc-500">€</span>
+            <span className="text-2xl font-medium text-zinc-500">$</span>
             <div className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text text-transparent">
               {total.toLocaleString()}
             </div>
@@ -375,7 +375,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-white">
-                          € {inv.amount.toLocaleString()}
+                          $ {inv.amount.toLocaleString()}
                         </div>
                       </td>
                       <td className="px-6 py-4">

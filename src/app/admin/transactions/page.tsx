@@ -106,7 +106,7 @@ export default function AdminTransactionsPage() {
             <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{totalAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">${totalAmount.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
@@ -114,7 +114,7 @@ export default function AdminTransactionsPage() {
             <CardTitle className="text-sm font-medium">Confirmed Amount</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{confirmedAmount.toLocaleString()}</div>
+            <div className="text-2xl font-bold">${confirmedAmount.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
@@ -202,7 +202,7 @@ export default function AdminTransactionsPage() {
                       </div>
                     </TableCell>
                     <TableCell>{item.investmentOpportunityTitle}</TableCell>
-                    <TableCell className="font-medium">€{item.amount.toLocaleString()}</TableCell>
+                    <TableCell className="font-medium">${item.amount.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
                     </TableCell>

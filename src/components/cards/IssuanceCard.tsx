@@ -49,7 +49,7 @@ export function IssuanceCard({ issuance }: { issuance: Issuance }) {
             </div>
             <div>
               <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Min. investment</div>
-              <div className="mt-1 text-lg font-bold">€ {issuance.minInvestment}</div>
+              <div className="mt-1 text-lg font-bold">$ {issuance.minInvestment}</div>
             </div>
           </div>
           <Button asChild className="w-full shadow-lg shadow-blue-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30">

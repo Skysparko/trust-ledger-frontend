@@ -43,7 +43,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.7, ease: "easeOut" }}
         >
-          Discover investment opportunities across various sectors. Start from €100 and build your portfolio with confidence.
+          Discover investment opportunities across various sectors. Start from $100 and build your portfolio with confidence.
         </motion.p>
         <motion.div
           className="mt-10 flex flex-wrap gap-4"
