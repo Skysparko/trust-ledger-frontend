@@ -32,8 +32,8 @@ export type AdminTransaction = {
   userId: string;
   userName: string;
   userEmail: string;
-  issuanceId: string;
-  issuanceTitle: string;
+  investmentOpportunityId: string;
+  investmentOpportunityTitle: string;
   amount: number;
   status: "pending" | "confirmed" | "failed" | "refunded" | "COMPLETED" | "PENDING" | "FAILED";
   paymentMethod: "bank_transfer" | "credit_card" | "sepa" | "BANK_TRANSFER" | "CREDIT_CARD" | "SEPA";
@@ -301,8 +301,18 @@ export class AdminApi extends BaseApi {
       userId: raw.userId || raw.user?.id || "",
       userName: raw.userName || raw.user?.name || "",
       userEmail: raw.userEmail || raw.user?.email || "",
-      issuanceId: raw.issuanceId || raw.issuance?.id || "",
-      issuanceTitle: raw.issuanceTitle || raw.issuance?.title || raw.investmentOpportunity?.title || "",
+      investmentOpportunityId: 
+        raw.investmentOpportunityId || 
+        raw.investmentOpportunity?.id || 
+        raw.issuanceId || 
+        raw.issuance?.id || 
+        "",
+      investmentOpportunityTitle: 
+        raw.investmentOpportunityTitle || 
+        raw.investmentOpportunity?.title || 
+        raw.issuanceTitle || 
+        raw.issuance?.title || 
+        "",
       amount: raw.amount,
       status: raw.status,
       paymentMethod: raw.paymentMethod,
@@ -336,16 +346,35 @@ export class AdminApi extends BaseApi {
       rawTransactions = Array.isArray(response) ? response : (response?.transactions || response?.data || []);
     }
     
+    // Debug: Log first transaction to see actual structure
+    if (rawTransactions.length > 0) {
+      console.log("[AdminApi.getTransactions] Sample raw transaction:", JSON.stringify(rawTransactions[0], null, 2));
+    }
+    
     // Transform nested structure to flat structure
     return rawTransactions.map(transaction => this.transformTransaction(transaction));
   }
 
   /**
    * Get transaction by ID (admin)
+   * Returns the full transaction object with nested user, investment, and investmentOpportunity data
    */
-  static async getTransaction(id: string): Promise<AdminTransaction> {
+  static async getTransaction(id: string): Promise<AdminTransaction & {
+    user?: any;
+    investment?: any;
+    investmentOpportunity?: any;
+  }> {
     const raw = await this.get<any>(`/admin/transactions/${id}`);
-    return this.transformTransaction(raw);
+    // Debug: Log raw transaction to see actual structure
+    console.log("[AdminApi.getTransaction] Raw transaction:", JSON.stringify(raw, null, 2));
+    // Transform to get the flattened structure, but also preserve nested objects
+    const transformed = this.transformTransaction(raw);
+    return {
+      ...transformed,
+      user: raw.user,
+      investment: raw.investment,
+      investmentOpportunity: raw.investmentOpportunity,
+    };
   }
 
   /**

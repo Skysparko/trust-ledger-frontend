@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -21,6 +22,7 @@ import { format } from "date-fns";
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminTransactionsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
@@ -61,21 +63,24 @@ export default function AdminTransactionsPage() {
     switch (normalizedStatus) {
       case "confirmed":
       case "completed":
-        return "bg-green-500";
+        return "bg-green-500/20 text-green-400 border-green-500/30 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30";
       case "pending":
-        return "bg-yellow-500";
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30";
       case "failed":
-        return "bg-red-500";
+        return "bg-red-500/20 text-red-400 border-red-500/30 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30";
       case "refunded":
-        return "bg-gray-500";
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30";
       default:
-        return "bg-gray-500";
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30";
     }
   };
 
   const totalAmount = paginatedItems.reduce((sum, item) => sum + item.amount, 0);
   const confirmedAmount = paginatedItems
-    .filter((item) => item.status === "confirmed")
+    .filter((item) => {
+      const status = item.status?.toLowerCase();
+      return status === "confirmed" || status === "completed";
+    })
     .reduce((sum, item) => sum + item.amount, 0);
 
   return (
@@ -161,7 +166,7 @@ export default function AdminTransactionsPage() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>User</TableHead>
-                <TableHead>Issuance</TableHead>
+                <TableHead>Investment Opportunity</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Payment Method</TableHead>
@@ -184,7 +189,11 @@ export default function AdminTransactionsPage() {
                 </TableRow>
               ) : (
                 paginatedItems.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow
+                    key={item.id}
+                    className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
+                    onClick={() => router.push(`/admin/transactions/${item.id}`)}
+                  >
                     <TableCell className="font-mono text-xs">{item.id}</TableCell>
                     <TableCell>
                       <div>
@@ -192,7 +201,7 @@ export default function AdminTransactionsPage() {
                         <div className="text-xs text-zinc-500">{item.userEmail}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{item.issuanceTitle}</TableCell>
+                    <TableCell>{item.investmentOpportunityTitle}</TableCell>
                     <TableCell className="font-medium">€{item.amount.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
