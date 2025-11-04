@@ -102,11 +102,13 @@ export default function TransactionsFiatPage() {
                       <td className="px-6 py-4 text-zinc-400">{transaction.currency}</td>
                       <td className="px-6 py-4">
                         <span className={
-                          transaction.status === "confirmed"
+                          transaction.status === "confirmed" || transaction.status === "completed"
                             ? "inline-flex items-center rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-400"
                             : transaction.status === "pending"
-                            ? "inline-flex items-center rounded-full bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-400"
-                            : "inline-flex items-center rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400"
+                            ? "inline-flex items-center rounded-full bg-yellow-500/20 px-3 py-1 text-xs font-medium text-yellow-400"
+                            : transaction.status === "failed"
+                            ? "inline-flex items-center rounded-full bg-red-500/20 px-3 py-1 text-xs font-medium text-red-400"
+                            : "inline-flex items-center rounded-full bg-gray-500/20 px-3 py-1 text-xs font-medium text-gray-400"
                         }>
                           {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
                         </span>

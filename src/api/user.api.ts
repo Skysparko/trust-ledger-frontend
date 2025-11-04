@@ -75,12 +75,21 @@ export type TransactionFilters = {
  */
 export type UserAsset = {
   id: string;
-  issuanceId: string;
-  issuanceName: string;
-  bonds: number;
-  totalValue: number;
-  purchaseDate: string;
-  status: "active" | "matured" | "cancelled";
+  userId: string;
+  name: string;
+  type: string;
+  quantity: number;
+  value: number;
+  dateAcquired: string;
+  investmentOpportunityId: string;
+  createdAt: string;
+  // Legacy fields for backwards compatibility (optional)
+  issuanceId?: string;
+  issuanceName?: string;
+  bonds?: number;
+  totalValue?: number;
+  purchaseDate?: string;
+  status?: "active" | "matured" | "cancelled";
 };
 
 /**

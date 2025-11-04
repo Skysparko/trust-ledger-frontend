@@ -6,7 +6,7 @@ import { useUserAssets } from "@/hooks/swr/useUser";
 export default function OwnedAssetsPage() {
   const { assets, isLoading, isError, error } = useUserAssets();
 
-  const totalValue = assets?.reduce((sum, asset) => sum + asset.totalValue, 0) || 0;
+  const totalValue = assets?.reduce((sum, asset) => sum + (asset.value ?? asset.totalValue ?? 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -78,16 +78,19 @@ export default function OwnedAssetsPage() {
                       key={asset.id}
                       className="border-b border-zinc-800/30 last:border-0 transition-colors hover:bg-zinc-800/20"
                     >
-                      <td className="px-6 py-4 font-medium text-white">{asset.issuanceName}</td>
-                      <td className="px-6 py-4 text-zinc-400">Bond</td>
-                      <td className="px-6 py-4 font-semibold text-white">{asset.bonds.toLocaleString()}</td>
-                      <td className="px-6 py-4 font-semibold text-white">€ {asset.totalValue.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-medium text-white">{asset.name ?? asset.issuanceName ?? "N/A"}</td>
+                      <td className="px-6 py-4 text-zinc-400">{asset.type ?? "Bond"}</td>
+                      <td className="px-6 py-4 font-semibold text-white">{(asset.quantity ?? asset.bonds ?? 0).toLocaleString()}</td>
+                      <td className="px-6 py-4 font-semibold text-white">€ {(asset.value ?? asset.totalValue ?? 0).toLocaleString()}</td>
                       <td className="px-6 py-4 text-zinc-400">
-                        {new Date(asset.purchaseDate).toLocaleDateString("en-US", {
-                          month: "2-digit",
-                          day: "2-digit",
-                          year: "numeric",
-                        })}
+                        {(() => {
+                          const dateStr = asset.dateAcquired ?? asset.purchaseDate;
+                          return dateStr ? new Date(dateStr).toLocaleDateString("en-US", {
+                            month: "2-digit",
+                            day: "2-digit",
+                            year: "numeric",
+                          }) : "N/A";
+                        })()}
                       </td>
                     </tr>
                   ))
