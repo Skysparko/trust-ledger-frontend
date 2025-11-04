@@ -35,6 +35,7 @@ const navigation = [
   { name: "Documents", href: "/admin/documents", icon: FolderOpen },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Transactions", href: "/admin/transactions", icon: CreditCard },
+  { name: "Blockchain", href: "/admin/blockchain", icon: FileText },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

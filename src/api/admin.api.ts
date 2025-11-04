@@ -657,5 +657,47 @@ export class AdminApi extends BaseApi {
   static async cancelInvestment(id: string): Promise<AdminInvestment> {
     return this.put<AdminInvestment>(`/admin/investments/${id}/cancel`, {});
   }
+
+  // ==================== Blockchain ====================
+
+  /**
+   * Get all blockchain investments with contract info
+   */
+  static async getBlockchainInvestments(): Promise<{
+    success: boolean;
+    data: BlockchainInvestment[];
+    totalContracts: number;
+    totalInvestments: number;
+  }> {
+    return this.get<{
+      success: boolean;
+      data: BlockchainInvestment[];
+      totalContracts: number;
+      totalInvestments: number;
+    }>("/admin/blockchain/investments");
+  }
 }
+
+export type BlockchainInvestment = {
+  investmentId: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  walletAddress: string | null;
+  opportunityId: string;
+  opportunityTitle: string;
+  company: string;
+  contractAddress: string;
+  contractDeploymentTx: string | null;
+  mintTxHash: string | null;
+  // Database values (for comparison)
+  dbBonds: number;
+  dbAmount: number;
+  // Actual on-chain values from Sonic network
+  onChainBonds: number;
+  onChainTokenBalance: string;
+  blockchainError: string | null;
+  status: string;
+  createdAt: string;
+};
 
