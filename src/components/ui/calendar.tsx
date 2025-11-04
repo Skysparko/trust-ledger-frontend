@@ -157,13 +157,6 @@ function Calendar({
           caption: "flex justify-between items-center pt-1 mb-4 px-2 py-2 rounded-lg bg-zinc-800/50 dark:bg-zinc-800/50 relative",
           caption_label: "hidden",
           caption_dropdowns: "flex items-center gap-2 absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none",
-          caption_dropdown: "hidden",
-          caption_dropdown_month: "hidden",
-          caption_dropdown_year: "hidden",
-          dropdown: "hidden",
-          dropdown_month: "hidden",
-          dropdown_year: "hidden",
-          dropdown_icon: "hidden",
         nav: "flex items-center gap-1 w-full justify-between",
         nav_button: cn(
           "h-8 w-8 rounded-lg flex items-center justify-center bg-transparent hover:bg-zinc-700/50 dark:hover:bg-zinc-700/50 transition-colors duration-200 p-0 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-500"
