@@ -5,7 +5,7 @@ export type Project = {
   title: string;
   type: string;
   location: string;
-  status: "In development" | "Live" | "Completed";
+  status: "ACTIVE" | "CANCELLED" | "COMPLETED";
   description?: string;
   createdAt?: string;
   updatedAt?: string;
