@@ -3,21 +3,27 @@ import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "ax
 // Get base URL from environment variable or default to API endpoint
 // Next.js environment variables are loaded at build time, so we read from process.env
 const getBaseURL = (): string => {
-  // Priority: API_URL (server-side) > NEXT_PUBLIC_API_URL (both) > default
-  // According to cURL docs, API is at http://localhost:3000/api
-  // The endpoints in cURL docs show /api/admin/... so base URL should be http://localhost:3000
-  // and we need to add /api prefix to all endpoints, OR base URL = http://localhost:3000/api
-  // Current approach: base URL = http://localhost:3000/api, endpoints = /admin/...
-  const baseURL = 
-    process.env.API_URL || 
-    process.env.NEXT_PUBLIC_API_URL || 
-    "http://localhost:3000/api";
+  // In Next.js:
+  // - NEXT_PUBLIC_* variables are available on both client and server
+  // - Variables without NEXT_PUBLIC_ prefix are ONLY available on the server
+  // For client-side code (browser), we should only use NEXT_PUBLIC_API_URL
+  // For server-side code (API routes, SSR), we can use API_URL or NEXT_PUBLIC_API_URL
+  
+  // Check if we're on the client (browser)
+  const isClient = typeof window !== 'undefined';
+  
+  // Priority: NEXT_PUBLIC_API_URL (available everywhere) > default
+  // Only use API_URL on server-side
+  const baseURL = isClient
+    ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api")
+    : (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api");
   
   // Debug log in development
   if (process.env.NODE_ENV === "development") {
     console.log("[Axios] Base URL configured:", baseURL);
     console.log("[Axios] NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL);
-    console.log("[Axios] API_URL:", process.env.API_URL);
+    console.log("[Axios] API_URL:", isClient ? "N/A (client-side)" : process.env.NEXT_PUBLIC_API_URL);
+    console.log("[Axios] Environment:", isClient ? "client" : "server");
   }
   
   return baseURL;
