@@ -14,8 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AdminApi, BlockchainInvestment } from "@/api/admin.api";
-import { Search, ExternalLink, Copy, CheckCircle2 } from "lucide-react";
+import { Search, ExternalLink, Copy, CheckCircle2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
+import { combineReducers } from "@reduxjs/toolkit";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -72,16 +73,19 @@ export default function AdminBlockchainPage() {
     setError(null);
     try {
       const response = await AdminApi.getBlockchainInvestments();
-      if (response.success) {
-        setInvestments(response.data);
-        setFilteredInvestments(response.data);
-        setStats({
-          totalContracts: response.totalContracts,
-          totalInvestments: response.totalInvestments,
-        });
+      console.log("response", response);
+        if (response) {
+        setInvestments(response);
+        setFilteredInvestments(response);
+      } else {
+        setError("Failed to load blockchain investments");
       }
     } catch (err: any) {
+      console.error("Error loading blockchain investments:", err);
       setError(err.message || "Failed to load blockchain investments");
+      // Set empty array on error so UI still renders
+      setInvestments([]);
+      setFilteredInvestments([]);
     } finally {
       setIsLoading(false);
     }
@@ -110,8 +114,9 @@ export default function AdminBlockchainPage() {
     }
   };
 
-  const formatAddress = (address: string) => {
+  const formatAddress = (address: string | null | undefined) => {
     if (!address) return "-";
+    if (address.length < 10) return address;
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
@@ -123,7 +128,10 @@ export default function AdminBlockchainPage() {
     );
   }
 
-  if (error) {
+  // Show error but still render the page if we have any data
+  const showErrorOnly = error && investments.length === 0;
+
+  if (showErrorOnly) {
     return (
       <div className="space-y-6">
         <div>
@@ -134,10 +142,12 @@ export default function AdminBlockchainPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center text-red-600">{error}</div>
-            <Button onClick={loadInvestments} className="mt-4">
-              Retry
-            </Button>
+            <div className="text-center">
+              <div className="text-red-600 mb-4">{error}</div>
+              <Button onClick={loadInvestments} disabled={isLoading}>
+                {isLoading ? "Loading..." : "Retry"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -153,8 +163,22 @@ export default function AdminBlockchainPage() {
         </p>
       </div>
 
+      {error && (
+        <Card className="border-orange-500">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="text-orange-600 text-sm">{error}</div>
+              <Button variant="outline" size="sm" onClick={loadInvestments} disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {stats && (
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium">Total Contracts</CardTitle>
@@ -170,7 +194,7 @@ export default function AdminBlockchainPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalInvestments}</div>
-              <p className="text-xs text-zinc-500 mt-1">On-chain investments</p>
+              <p className="text-xs text-zinc-500 mt-1">All investments</p>
             </CardContent>
           </Card>
           <Card>
@@ -179,9 +203,20 @@ export default function AdminBlockchainPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {investments.reduce((sum, inv) => sum + inv.onChainBonds, 0)}
+                {investments.reduce((sum, inv) => sum + (inv.onChainBonds || 0), 0)}
               </div>
               <p className="text-xs text-zinc-500 mt-1">Verified from Sonic network</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">With Errors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-500">
+                {investments.filter(inv => inv.blockchainError).length}
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">Need attention</p>
             </CardContent>
           </Card>
         </div>
@@ -191,14 +226,25 @@ export default function AdminBlockchainPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Investment Records</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-zinc-400" />
-              <Input
-                placeholder="Search by user, opportunity, or contract..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-zinc-400" />
+                <Input
+                  placeholder="Search by user, opportunity, or contract..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={loadInvestments}
+                disabled={isLoading}
+                title="Refresh data"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -222,8 +268,26 @@ export default function AdminBlockchainPage() {
             <TableBody>
               {paginatedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center text-zinc-500">
-                    No blockchain investments found
+                  <TableCell colSpan={11} className="text-center text-zinc-500 py-8">
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="font-medium">No blockchain investments found</p>
+                      <p className="text-xs">
+                        {investments.length === 0 
+                          ? "No investments exist yet. Create an investment to see it here."
+                          : "No investments match your search criteria."
+                        }
+                      </p>
+                      {investments.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSearchQuery("")}
+                          className="mt-2"
+                        >
+                          Clear Search
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -237,7 +301,31 @@ export default function AdminBlockchainPage() {
                     </TableCell>
                     <TableCell>
                       {inv.walletAddress ? (
-                        <div className="font-mono text-xs">{formatAddress(inv.walletAddress)}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs">{formatAddress(inv.walletAddress)}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => copyToClipboard(inv.walletAddress!, inv.walletAddress!)}
+                            title="Copy wallet address"
+                          >
+                            {copiedAddress === inv.walletAddress ? (
+                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <a
+                            href={getExplorerUrl(inv.walletAddress)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:text-blue-600"
+                            title="View wallet on explorer"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
                       ) : (
                         <span className="text-zinc-500 text-xs">No wallet</span>
                       )}
@@ -246,15 +334,20 @@ export default function AdminBlockchainPage() {
                     <TableCell>{inv.company}</TableCell>
                     <TableCell>
                       {inv.blockchainError ? (
-                        <div>
-                          <div className="font-bold text-red-500">Error</div>
-                          <div className="text-xs text-red-400">{inv.blockchainError}</div>
+                        <div className="max-w-xs">
+                          <div className="font-bold text-red-500 text-xs">Error</div>
+                          <div className="text-xs text-red-400 break-words">{inv.blockchainError}</div>
                         </div>
                       ) : (
                         <div>
-                          <div className="font-bold text-green-600">{inv.onChainBonds}</div>
+                          <div className="font-bold text-green-600">{inv.onChainBonds || 0}</div>
                           <div className="text-xs text-zinc-500">
-                            {inv.onChainTokenBalance !== "0" ? "✓ Verified" : "No balance"}
+                            {inv.onChainTokenBalance && inv.onChainTokenBalance !== "0" 
+                              ? "✓ Verified" 
+                              : inv.contractAddress 
+                                ? "Checking..." 
+                                : "No contract"
+                            }
                           </div>
                         </div>
                       )}
@@ -265,36 +358,45 @@ export default function AdminBlockchainPage() {
                     </TableCell>
                     <TableCell>${inv.dbAmount.toLocaleString()}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs">{formatAddress(inv.contractAddress)}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => copyToClipboard(inv.contractAddress, inv.contractAddress)}
-                          title="Copy address"
-                        >
-                          {copiedAddress === inv.contractAddress ? (
-                            <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                        </Button>
-                        <a
-                          href={getExplorerUrl(inv.contractAddress)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:text-blue-600"
-                          title="View on explorer"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
+                      {inv.contractAddress ? (
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs">{formatAddress(inv.contractAddress)}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => copyToClipboard(inv.contractAddress!, inv.contractAddress!)}
+                            title="Copy address"
+                          >
+                            {copiedAddress === inv.contractAddress ? (
+                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <a
+                            href={getExplorerUrl(inv.contractAddress)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:text-blue-600"
+                            title="View on explorer"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="text-zinc-500 text-xs">Not deployed</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(inv.status)}>{inv.status}</Badge>
                     </TableCell>
-                    <TableCell>{format(new Date(inv.createdAt), "MMM dd, yyyy")}</TableCell>
+                    <TableCell>
+                      {inv.createdAt 
+                        ? format(new Date(inv.createdAt), "MMM dd, yyyy")
+                        : "-"
+                      }
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {inv.mintTxHash && (

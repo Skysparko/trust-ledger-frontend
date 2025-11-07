@@ -6,7 +6,7 @@ This project uses environment variables for configuration. Follow these steps to
 
 1. **Create or update the `.env` file** in the project root with your actual values:
    - For local development, update `NEXT_PUBLIC_API_URL` with your backend API URL
-   - Example: `NEXT_PUBLIC_API_URL=http://localhost:8000/api`
+   - Example: `NEXT_PUBLIC_API_URL=http://localhost:3000/api`
 
 2. **Restart your development server** after changing environment variables:
    ```bash
@@ -20,7 +20,7 @@ This project uses environment variables for configuration. Follow these steps to
 #### `NEXT_PUBLIC_API_URL`
 - **Description**: Public API URL accessible on client-side
 - **Type**: String (URL)
-- **Default**: `http://localhost:8000/api`
+- **Default**: `http://localhost:3000/api`
 - **Example**: `https://api.yourdomain.com`
 - **Usage**: This is the base URL for all API calls made from the browser
 
@@ -44,6 +44,13 @@ This project uses environment variables for configuration. Follow these steps to
 - **Type**: String
 - **Default**: `RWA`
 - **Usage**: Can be used for branding or metadata
+
+#### `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
+- **Description**: WalletConnect Project ID (optional, for mobile wallet support)
+- **Type**: String
+- **Default**: Not set (WalletConnect connector will be disabled)
+- **Usage**: Get a free Project ID from [cloud.walletconnect.com](https://cloud.walletconnect.com)
+- **Note**: MetaMask and other injected wallets work without this. Only needed if you want WalletConnect support.
 
 ## File Structure
 
