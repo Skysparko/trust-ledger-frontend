@@ -542,6 +542,26 @@ export default function AdminInvestmentOpportunitiesPage() {
     }
   };
 
+  const handleNextTab = () => {
+    const tabs = ["basic", "financial", "company", "details", "media"];
+    const currentIndex = tabs.indexOf(activeTab);
+    if (currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1]);
+    }
+  };
+
+  const getNextButtonText = () => {
+    if (editingItem) {
+      return isLoading || formik.isSubmitting ? "Saving..." : "Update";
+    }
+    const tabs = ["basic", "financial", "company", "details", "media"];
+    const currentIndex = tabs.indexOf(activeTab);
+    if (currentIndex === tabs.length - 1) {
+      return isLoading || formik.isSubmitting ? "Saving..." : "Create";
+    }
+    return "Next";
+  };
+
 
   const getStatusColor = (status: string) => {
     const normalizedStatus = status?.toLowerCase();
@@ -1444,9 +1464,15 @@ export default function AdminInvestmentOpportunitiesPage() {
             <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || formik.isSubmitting}>
-              {isLoading || formik.isSubmitting ? "Saving..." : editingItem ? "Update" : "Create"}
-            </Button>
+            {!editingItem && activeTab !== "media" ? (
+              <Button type="button" onClick={handleNextTab} disabled={isLoading || formik.isSubmitting}>
+                Next
+              </Button>
+            ) : (
+              <Button type="submit" disabled={isLoading || formik.isSubmitting}>
+                {getNextButtonText()}
+              </Button>
+            )}
           </DialogFooter>
           </form>
         </DialogContent>
