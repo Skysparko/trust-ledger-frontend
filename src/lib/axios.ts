@@ -67,11 +67,27 @@ const isAdminEndpoint = (url: string, method?: string): boolean => {
     return !isReadOnly; // Returns true only for write operations
   }
   
+  // Blockchain endpoints that require admin token (super admin)
+  // Only endpoints with SuperAdminGuard need admin token
+  const blockchainAdminEndpoints = [
+    "/blockchain/deploy-bond-token",      // SuperAdminGuard
+    "/blockchain/wallet-info",            // SuperAdminGuard
+    "/blockchain/contract-from-tx",       // SuperAdminGuard
+    // Note: mint-bonds and transfer-bonds use UserAuthGuard, not SuperAdminGuard
+  ];
+  
+  const isBlockchainAdminEndpoint = blockchainAdminEndpoints.some(endpoint =>
+    urlPath.startsWith(endpoint) ||
+    urlPath.startsWith(`/api${endpoint}`) ||
+    urlPath.includes(endpoint)
+  );
+  
   // Other admin endpoints always need admin token
   return (
     urlPath.startsWith("/admin/") ||
     urlPath.startsWith("/api/admin/") ||
-    urlPath.includes("/admin/")
+    urlPath.includes("/admin/") ||
+    isBlockchainAdminEndpoint
   );
 };
 

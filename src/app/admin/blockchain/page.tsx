@@ -14,9 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AdminApi, BlockchainInvestment } from "@/api/admin.api";
-import { Search, ExternalLink, Copy, CheckCircle2, RefreshCw } from "lucide-react";
+import { InvestmentOpportunitiesApi, InvestmentOpportunityListItem } from "@/api/investment-opportunities.api";
+import { BlockchainApi } from "@/api/blockchain.api";
+import { Search, ExternalLink, Copy, CheckCircle2, RefreshCw, Rocket, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { combineReducers } from "@reduxjs/toolkit";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -29,6 +30,11 @@ export default function AdminBlockchainPage() {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<{ totalContracts: number; totalInvestments: number } | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  
+  // Undeployed opportunities state
+  const [undeployedOpportunities, setUndeployedOpportunities] = useState<InvestmentOpportunityListItem[]>([]);
+  const [isLoadingOpportunities, setIsLoadingOpportunities] = useState(false);
+  const [deployingOpportunityId, setDeployingOpportunityId] = useState<string | null>(null);
 
   // Determine explorer URL based on network
   const getExplorerUrl = (address: string, type: "address" | "tx" = "address") => {
@@ -48,6 +54,7 @@ export default function AdminBlockchainPage() {
 
   useEffect(() => {
     loadInvestments();
+    loadUndeployedOpportunities();
   }, []);
 
   useEffect(() => {
@@ -73,10 +80,16 @@ export default function AdminBlockchainPage() {
     setError(null);
     try {
       const response = await AdminApi.getBlockchainInvestments();
-      console.log("response", response);
-        if (response) {
-        setInvestments(response);
-        setFilteredInvestments(response);
+      console.log("response", response.data);
+      if (response.data.success) {
+        // Ensure data is an array
+        const investmentsData = Array.isArray(response.data.data) ? response.data.data : [];
+        setInvestments(investmentsData);
+        setFilteredInvestments(investmentsData);
+        setStats({
+          totalContracts: response.data.totalContracts || 0,
+          totalInvestments: response.data.totalInvestments || 0,
+        });
       } else {
         setError("Failed to load blockchain investments");
       }
@@ -88,6 +101,74 @@ export default function AdminBlockchainPage() {
       setFilteredInvestments([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadUndeployedOpportunities = async () => {
+    setIsLoadingOpportunities(true);
+    try {
+      const response = await InvestmentOpportunitiesApi.getInvestmentOpportunities({ 
+        limit: 100,
+        page: 1 
+      });
+      
+      const allOpportunities = response.opportunities || [];
+      
+      // Filter opportunities without contract addresses
+      // Now we can check contractAddress directly from the response
+      const undeployed = allOpportunities.filter(opp => {
+        // If no contractAddress, it's undeployed
+        if (!opp.contractAddress) {
+          return true;
+        }
+        
+        // If contractAddress exists but is empty string, it's undeployed
+        if (opp.contractAddress.trim() === '') {
+          return true;
+        }
+        
+        // Contract is deployed, skip it
+        return false;
+      });
+      
+      setUndeployedOpportunities(undeployed);
+    } catch (err: any) {
+      console.error("Error loading undeployed opportunities:", err);
+      // Don't show error, just set empty array
+      setUndeployedOpportunities([]);
+    } finally {
+      setIsLoadingOpportunities(false);
+    }
+  };
+
+  const handleDeployContract = async (opportunity: InvestmentOpportunityListItem) => {
+    setDeployingOpportunityId(opportunity.id);
+    try {
+      const response = await BlockchainApi.deployBondToken({
+        opportunityId: opportunity.id,
+        name: `${opportunity.company} Bond`,
+        symbol: `${opportunity.company.substring(0, 3).toUpperCase()}BOND`,
+        couponRate: opportunity.rate * 100, // Convert to basis points
+        bondPrice: 100, // Default $100 per bond
+      });
+
+      if (response.success) {
+        // Remove from undeployed list
+        setUndeployedOpportunities(prev => 
+          prev.filter(opp => opp.id !== opportunity.id)
+        );
+        
+        // Reload investments to show new contract
+        await loadInvestments();
+        
+        // Show success message (you can add a toast notification here)
+        alert(`Contract deployed successfully!\nContract Address: ${response.data.contractAddress}\nTransaction: ${response.data.transactionHash}`);
+      }
+    } catch (err: any) {
+      console.error("Error deploying contract:", err);
+      alert(`Failed to deploy contract: ${err.message || "Unknown error"}`);
+    } finally {
+      setDeployingOpportunityId(null);
     }
   };
 
@@ -222,6 +303,86 @@ export default function AdminBlockchainPage() {
         </div>
       )}
 
+      {/* Undeployed Opportunities Section */}
+      {undeployedOpportunities.length > 0 && (
+        <Card className="border-orange-200 dark:border-orange-800">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Rocket className="h-5 w-5 text-orange-500" />
+                  Undeployed Bond Contracts
+                </CardTitle>
+                <p className="text-sm text-zinc-500 mt-1">
+                  {undeployedOpportunities.length} investment opportunity{undeployedOpportunities.length !== 1 ? 'ies' : ''} without deployed contracts
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadUndeployedOpportunities}
+                disabled={isLoadingOpportunities}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingOpportunities ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {undeployedOpportunities.map((opp) => (
+                <div
+                  key={opp.id}
+                  className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <h3 className="font-medium text-sm">{opp.title}</h3>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          {opp.company} • {opp.rate}% • {opp.termMonths} months
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-orange-600 border-orange-600">
+                        Not Deployed
+                      </Badge>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleDeployContract(opp)}
+                    disabled={deployingOpportunityId === opp.id || isLoadingOpportunities}
+                    className="ml-4"
+                  >
+                    {deployingOpportunityId === opp.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Deploying...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="h-4 w-4 mr-2" />
+                        Deploy Contract
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoadingOpportunities && undeployedOpportunities.length === 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-zinc-500 mr-2" />
+              <span className="text-zinc-500">Checking for undeployed contracts...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -336,7 +497,7 @@ export default function AdminBlockchainPage() {
                       {inv.blockchainError ? (
                         <div className="max-w-xs">
                           <div className="font-bold text-red-500 text-xs">Error</div>
-                          <div className="text-xs text-red-400 break-words">{inv.blockchainError}</div>
+                          <div className="text-xs text-red-400 break-all">{inv.blockchainError}</div>
                         </div>
                       ) : (
                         <div>

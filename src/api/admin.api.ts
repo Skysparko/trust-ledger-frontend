@@ -694,8 +694,28 @@ export class AdminApi extends BaseApi {
   /**
    * Get all blockchain investments with contract info
    */
-  static async getBlockchainInvestments(): Promise<BlockchainInvestment[]> {
-    return this.get<BlockchainInvestment[]>("/admin/blockchain/investments");
+  static async getBlockchainInvestments(): Promise<{
+    data: {
+      success: boolean;
+      data: BlockchainInvestment[];
+      totalContracts: number;
+      totalInvestments: number;
+      totalInvestmentsWithContracts?: number;
+      totalInvestmentsWithWallets?: number;
+      onChainTotalBonds?: number;
+    }
+  }> {
+    return this.get<{
+      data: {
+      success: boolean;
+      data: BlockchainInvestment[];
+      totalContracts: number;
+      totalInvestments: number;
+      totalInvestmentsWithContracts?: number;
+      totalInvestmentsWithWallets?: number;
+      onChainTotalBonds?: number;
+      }
+    }>("/admin/blockchain/investments");
   }
 }
 

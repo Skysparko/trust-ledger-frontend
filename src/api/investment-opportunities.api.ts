@@ -26,6 +26,7 @@ export type InvestmentOpportunityListItem = {
   thumbnailImage?: string; // URL
   logo?: string; // URL
   isFeatured: boolean;
+  contractAddress?: string; // Blockchain contract address (if deployed)
   createdAt: string; // ISO 8601 date
   updatedAt: string; // ISO 8601 date
 };
