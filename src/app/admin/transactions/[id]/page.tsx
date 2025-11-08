@@ -674,18 +674,18 @@ export default function TransactionDetailPage() {
                       <p className="text-lg">{investmentOpportunity.termMonths || "-"} months</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Min Investment</p>
+                      <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Price</p>
                       <p className="text-lg">${investmentOpportunity.minInvestment?.toLocaleString() || "-"}</p>
                     </div>
                     {investmentOpportunity.maxInvestment !== undefined &&
                       investmentOpportunity.maxInvestment !== null && (
                         <div>
-                          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Max Investment</p>
+                          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Offering</p>
                           <p className="text-lg">${investmentOpportunity.maxInvestment.toLocaleString()}</p>
                         </div>
                       )}
                     <div>
-                      <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Funding Target</p>
+                      <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Bonds</p>
                       <p className="text-lg">
                         ${investmentOpportunity.totalFundingTarget?.toLocaleString() || "-"}
                       </p>

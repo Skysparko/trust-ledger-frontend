@@ -93,15 +93,15 @@ const createValidationSchema = (
       .max(100, "Interest rate cannot exceed 100%")
       .required("Interest rate is required"),
     minInvestment: Yup.number()
-      .typeError("Min investment must be a number")
-      .min(0, "Min investment must be greater than 0")
-      .required("Min investment is required"),
+      .typeError("Price must be a number")
+      .min(0, "Price must be greater than 0")
+      .required("Price is required"),
     maxInvestment: Yup.number()
-      .typeError("Max investment must be a number")
-      .min(0, "Max investment must be greater than 0")
+      .typeError("Total offering must be a number")
+      .min(0, "Total offering must be greater than 0")
       .nullable()
       .optional()
-      .test("greater-than-min", "Max investment must be greater than min investment", function(value) {
+      .test("greater-than-min", "Total offering must be greater than price", function(value) {
         if (!value) return true;
         return value > (this.parent.minInvestment || 0);
       }),
@@ -110,9 +110,9 @@ const createValidationSchema = (
       .min(1, "Term must be at least 1 month")
       .required("Term (months) is required"),
     totalFundingTarget: Yup.number()
-      .typeError("Total funding target must be a number")
-      .min(0, "Total funding target must be greater than 0")
-      .required("Total funding target is required"),
+      .typeError("Total bonds must be a number")
+      .min(0, "Total bonds must be greater than 0")
+      .required("Total bonds is required"),
     paymentFrequency: Yup.string()
       .required("Payment frequency is required"),
     bondStructure: Yup.string()
@@ -179,10 +179,6 @@ const createValidationSchema = (
     images: Yup.array()
       .of(Yup.string().url("Each image URL must be valid"))
       .default([]),
-    videoUrl: Yup.string()
-      .url("Video URL must be a valid URL")
-      .nullable()
-      .optional(),
     isFeatured: Yup.boolean()
       .default(false),
     faq: Yup.array()
@@ -287,7 +283,6 @@ export default function AdminInvestmentOpportunitiesPage() {
     thumbnailImage: "",
     logo: "",
     images: [],
-    videoUrl: "",
     isFeatured: false,
     faq: [],
     milestones: [],
@@ -349,7 +344,6 @@ export default function AdminInvestmentOpportunitiesPage() {
           thumbnailImage: values.thumbnailImage,
           logo: values.logo,
           images: (values.images || []).filter(img => img.trim() !== ""),
-          videoUrl: values.videoUrl,
           isFeatured: values.isFeatured || false,
           faq: (values.faq || []).length > 0 ? (values.faq || []).filter(f => f.question.trim() !== "" && f.answer.trim() !== "") : undefined,
           milestones: (values.milestones || []).length > 0 ? (values.milestones || []).filter(m => m.date && m.description.trim() !== "") : undefined,
@@ -491,7 +485,6 @@ export default function AdminInvestmentOpportunitiesPage() {
         thumbnailImage: detail.thumbnailImage || "",
         logo: detail.logo || "",
         images: detail.images || [],
-        videoUrl: detail.videoUrl || "",
         isFeatured: detail.isFeatured || false,
         faq: detail.faq || [],
         milestones: (detail.milestones || []).map(m => ({ date: formatDateForPicker(m.date), description: m.description })),
@@ -542,12 +535,83 @@ export default function AdminInvestmentOpportunitiesPage() {
     }
   };
 
-  const handleNextTab = () => {
+  // Get required fields for each tab
+  const getRequiredFieldsForTab = (tab: string): string[] => {
+    switch (tab) {
+      case "basic":
+        return ["title", "company", "sector", "type", "location", "projectType", "status", "riskLevel", "startDate", "description"];
+      case "financial":
+        return ["rate", "minInvestment", "termMonths", "totalFundingTarget", "paymentFrequency"];
+      case "company":
+        return []; // No required fields in company tab
+      case "details":
+        return ["useOfFunds"];
+      case "media":
+        return []; // No required fields in media tab
+      default:
+        return [];
+    }
+  };
+
+  // Validate fields for a specific tab
+  const validateTab = async (tab: string): Promise<boolean> => {
+    const requiredFields = getRequiredFieldsForTab(tab);
+    if (requiredFields.length === 0) return true;
+
+    // Mark all required fields as touched
+    const touchedFields: Record<string, boolean> = {};
+    requiredFields.forEach(field => {
+      touchedFields[field] = true;
+    });
+    formik.setTouched({ ...formik.touched, ...touchedFields });
+
+    // Validate only the required fields for this tab
+    const errors: Record<string, string> = {};
+    let isValid = true;
+
+    for (const field of requiredFields) {
+      try {
+        await validationSchema.validateAt(field, formik.values);
+      } catch (error: any) {
+        errors[field] = error.message;
+        isValid = false;
+      }
+    }
+
+    if (!isValid) {
+      formik.setErrors({ ...formik.errors, ...errors });
+    }
+
+    return isValid;
+  };
+
+  const handleNextTab = async () => {
+    const isValid = await validateTab(activeTab);
+    if (!isValid) {
+      return; // Don't proceed if validation fails
+    }
+
     const tabs = ["basic", "financial", "company", "details", "media"];
     const currentIndex = tabs.indexOf(activeTab);
     if (currentIndex < tabs.length - 1) {
       setActiveTab(tabs[currentIndex + 1]);
     }
+  };
+
+  const handleTabChange = async (newTab: string) => {
+    // Validate current tab before allowing change
+    const isValid = await validateTab(activeTab);
+    if (!isValid) {
+      return; // Don't allow tab change if validation fails
+    }
+    setActiveTab(newTab);
+  };
+
+  // Helper to get error className for inputs
+  const getInputErrorClass = (fieldName: string): string => {
+    return formik.touched[fieldName] && formik.errors[fieldName]
+      ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/50"
+      : "";
   };
 
   const getNextButtonText = () => {
@@ -711,7 +775,7 @@ export default function AdminInvestmentOpportunitiesPage() {
           </DialogHeader>
 
           <form onSubmit={formik.handleSubmit}>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="basic">Basic</TabsTrigger>
               <TabsTrigger value="financial">Financial</TabsTrigger>
@@ -733,6 +797,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     onBlur={formik.handleBlur}
                     placeholder="Investment Opportunity Title"
                     minLength={10}
+                    className={getInputErrorClass("title")}
                   />
                   {formik.touched.title && formik.errors.title && (
                     <p className="text-xs text-red-500">{formik.errors.title}</p>
@@ -752,6 +817,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder="Company Name"
+                    className={getInputErrorClass("company")}
                   />
                   {formik.touched.company && formik.errors.company && (
                     <p className="text-xs text-red-500">{formik.errors.company}</p>
@@ -765,6 +831,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                   <Select
                     id="sector"
                     value={formik.values.sector || ""}
+                    className={getInputErrorClass("sector")}
                     options={[
                       { label: "Select a sector...", value: "" },
                       ...(uniqueSectors.length > 0 
@@ -799,6 +866,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder="e.g., Bond, Equity, Convertible"
+                    className={getInputErrorClass("type")}
                   />
                   {formik.touched.type && formik.errors.type && (
                     <p className="text-xs text-red-500">{formik.errors.type}</p>
@@ -816,6 +884,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder="City, Country"
+                    className={getInputErrorClass("location")}
                   />
                   {formik.touched.location && formik.errors.location && (
                     <p className="text-xs text-red-500">{formik.errors.location}</p>
@@ -830,6 +899,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                     placeholder="e.g., Green Bond, Infrastructure, etc."
+                    className={getInputErrorClass("projectType")}
                   />
                   {formik.touched.projectType && formik.errors.projectType && (
                     <p className="text-xs text-red-500">{formik.errors.projectType}</p>
@@ -866,16 +936,12 @@ export default function AdminInvestmentOpportunitiesPage() {
                   <Select
                     id="riskLevel"
                     value={formik.values.riskLevel || ""}
+                    className={getInputErrorClass("riskLevel")}
                     options={[
                       { label: "Select risk level...", value: "" },
-                      ...(uniqueRiskLevels.length > 0
-                        ? uniqueRiskLevels.map(level => ({ label: level, value: level }))
-                        : [
-                            { label: "Low", value: "Low" },
-                            { label: "Medium", value: "Medium" },
-                            { label: "High", value: "High" },
-                          ]
-                      )
+                      { label: "Low", value: "Low" },
+                      { label: "Medium", value: "Medium" },
+                      { label: "High", value: "High" },
                     ]}
                     onValueChange={(value) => {
                       formik.setFieldValue("riskLevel", value && value.trim() !== "" ? (value as InvestmentOpportunityRiskLevel) : undefined);
@@ -895,6 +961,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     value={formik.values.startDate || ""}
                     onChange={(value) => formik.setFieldValue("startDate", value)}
                     placeholder="Select start date"
+                    className={getInputErrorClass("startDate")}
                   />
                   {formik.touched.startDate && formik.errors.startDate && (
                     <p className="text-xs text-red-500">{formik.errors.startDate}</p>
@@ -934,7 +1001,11 @@ export default function AdminInvestmentOpportunitiesPage() {
                 <textarea
                   id="description"
                   name="description"
-                  className="w-full min-h-[120px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                  className={`w-full min-h-[120px] rounded-lg border px-3 py-2 dark:bg-zinc-900 ${
+                    formik.touched.description && formik.errors.description
+                      ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/50"
+                      : "border-zinc-300 dark:border-zinc-700"
+                  }`}
                   value={formik.values.description || ""}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -978,6 +1049,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     }}
                     onBlur={formik.handleBlur}
                     placeholder="7.5"
+                    className={getInputErrorClass("rate")}
                   />
                   {formik.touched.rate && formik.errors.rate && (
                     <p className="text-xs text-red-500">{formik.errors.rate}</p>
@@ -997,6 +1069,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     }}
                     onBlur={formik.handleBlur}
                     placeholder="36"
+                    className={getInputErrorClass("termMonths")}
                   />
                   {formik.touched.termMonths && formik.errors.termMonths && (
                     <p className="text-xs text-red-500">{formik.errors.termMonths}</p>
@@ -1007,6 +1080,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                   <Select
                     id="paymentFrequency"
                     value={formik.values.paymentFrequency || ""}
+                    className={getInputErrorClass("paymentFrequency")}
                     options={[
                       { label: "Select payment frequency...", value: "" },
                       ...uniquePaymentFrequencies.map(freq => ({ label: freq, value: freq }))
@@ -1023,7 +1097,7 @@ export default function AdminInvestmentOpportunitiesPage() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="minInvestment">Min Investment ($) *</Label>
+                  <Label htmlFor="minInvestment">Price ($) *</Label>
                   <Input
                     id="minInvestment"
                     name="minInvestment"
@@ -1037,13 +1111,14 @@ export default function AdminInvestmentOpportunitiesPage() {
                     }}
                     onBlur={formik.handleBlur}
                     placeholder="100"
+                    className={getInputErrorClass("minInvestment")}
                   />
                   {formik.touched.minInvestment && formik.errors.minInvestment && (
                     <p className="text-xs text-red-500">{formik.errors.minInvestment}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="maxInvestment">Max Investment ($)</Label>
+                  <Label htmlFor="maxInvestment">Total Offering ($)</Label>
                   <Input
                     id="maxInvestment"
                     name="maxInvestment"
@@ -1060,7 +1135,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="totalFundingTarget">Total Target ($) *</Label>
+                  <Label htmlFor="totalFundingTarget">Total Bonds ($) *</Label>
                   <Input
                     id="totalFundingTarget"
                     name="totalFundingTarget"
@@ -1074,6 +1149,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                     }}
                     onBlur={formik.handleBlur}
                     placeholder="1000000"
+                    className={getInputErrorClass("totalFundingTarget")}
                   />
                   {formik.touched.totalFundingTarget && formik.errors.totalFundingTarget && (
                     <p className="text-xs text-red-500">{formik.errors.totalFundingTarget}</p>
@@ -1204,7 +1280,11 @@ export default function AdminInvestmentOpportunitiesPage() {
                 <textarea
                   id="useOfFunds"
                   name="useOfFunds"
-                  className="w-full min-h-[100px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                  className={`w-full min-h-[100px] rounded-lg border px-3 py-2 dark:bg-zinc-900 ${
+                    formik.touched.useOfFunds && formik.errors.useOfFunds
+                      ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/50"
+                      : "border-zinc-300 dark:border-zinc-700"
+                  }`}
                   value={formik.values.useOfFunds || ""}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
@@ -1440,22 +1520,6 @@ export default function AdminInvestmentOpportunitiesPage() {
                     + Add Image URL
                   </Button>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="videoUrl">Video URL</Label>
-                <Input
-                  id="videoUrl"
-                  name="videoUrl"
-                  type="url"
-                  value={formik.values.videoUrl || ""}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  placeholder="https://example.com/video.mp4 or YouTube/Vimeo URL"
-                />
-                {formik.touched.videoUrl && formik.errors.videoUrl && (
-                  <p className="text-xs text-red-500">{formik.errors.videoUrl}</p>
-                )}
               </div>
             </TabsContent>
           </Tabs>

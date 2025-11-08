@@ -69,6 +69,7 @@ export function DatePicker({
             "w-full justify-start text-left font-normal h-11 px-4 rounded-lg border-2 border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:border-blue-500",
             !date && "text-zinc-500 dark:text-zinc-400",
             date && "text-zinc-900 dark:text-zinc-50",
+            className?.includes("border-red-500") && "border-red-500 focus:border-red-500 focus:ring-red-500/50",
             className
           )}
         >
