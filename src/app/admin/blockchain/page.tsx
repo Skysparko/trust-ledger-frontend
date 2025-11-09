@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { AdminApi, BlockchainInvestment } from "@/api/admin.api";
 import { InvestmentOpportunitiesApi, InvestmentOpportunityListItem } from "@/api/investment-opportunities.api";
 import { BlockchainApi } from "@/api/blockchain.api";
-import { Search, ExternalLink, Copy, CheckCircle2, RefreshCw, Rocket, Loader2 } from "lucide-react";
+import { Search, ExternalLink, Copy, CheckCircle2, RefreshCw, Rocket, Loader2, X, CheckCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 
 const ITEMS_PER_PAGE = 20;
@@ -35,6 +35,15 @@ export default function AdminBlockchainPage() {
   const [undeployedOpportunities, setUndeployedOpportunities] = useState<InvestmentOpportunityListItem[]>([]);
   const [isLoadingOpportunities, setIsLoadingOpportunities] = useState(false);
   const [deployingOpportunityId, setDeployingOpportunityId] = useState<string | null>(null);
+  
+  // Success/Error message state
+  const [deploymentMessage, setDeploymentMessage] = useState<{
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+    contractAddress?: string;
+    transactionHash?: string;
+  } | null>(null);
 
   // Determine explorer URL based on network
   const getExplorerUrl = (address: string, type: "address" | "tx" = "address") => {
@@ -143,30 +152,64 @@ export default function AdminBlockchainPage() {
 
   const handleDeployContract = async (opportunity: InvestmentOpportunityListItem) => {
     setDeployingOpportunityId(opportunity.id);
+    setDeploymentMessage(null); // Clear any previous messages
+    
     try {
       const response = await BlockchainApi.deployBondToken({
         opportunityId: opportunity.id,
         name: `${opportunity.company} Bond`,
         symbol: `${opportunity.company.substring(0, 3).toUpperCase()}BOND`,
-        couponRate: opportunity.rate * 100, // Convert to basis points
+        couponRate: opportunity.rate, // Pass as percentage (e.g., 7.5 for 7.5%)
         bondPrice: opportunity.minInvestment, // Use minInvestment as price per bond
       });
 
       if (response.success) {
-        // Remove from undeployed list
+        // Show success message immediately
+        setDeploymentMessage({
+          type: 'success',
+          title: 'Contract Deployed Successfully!',
+          message: `The bond contract for "${opportunity.title}" has been deployed to the blockchain.`,
+          contractAddress: response.data.contractAddress,
+          transactionHash: response.data.transactionHash,
+        });
+        
+        // Immediately remove from undeployed list (optimistic update)
         setUndeployedOpportunities(prev => 
           prev.filter(opp => opp.id !== opportunity.id)
         );
         
+        // Reload undeployed opportunities list to ensure consistency
+        // Use a small delay to ensure backend has updated
+        setTimeout(async () => {
+          await loadUndeployedOpportunities();
+        }, 1000);
+        
         // Reload investments to show new contract
         await loadInvestments();
         
-        // Show success message (you can add a toast notification here)
-        alert(`Contract deployed successfully!\nContract Address: ${response.data.contractAddress}\nTransaction: ${response.data.transactionHash}`);
+        // Auto-hide success message after 10 seconds
+        setTimeout(() => {
+          setDeploymentMessage(null);
+        }, 10000);
       }
     } catch (err: any) {
       console.error("Error deploying contract:", err);
-      alert(`Failed to deploy contract: ${err.message || "Unknown error"}`);
+      const errorMessage = err.response?.data?.message 
+        ? Array.isArray(err.response.data.message) 
+          ? err.response.data.message.join(", ")
+          : err.response.data.message
+        : err.message || "Unknown error";
+      
+      setDeploymentMessage({
+        type: 'error',
+        title: 'Deployment Failed',
+        message: errorMessage,
+      });
+      
+      // Auto-hide error message after 8 seconds
+      setTimeout(() => {
+        setDeploymentMessage(null);
+      }, 8000);
     } finally {
       setDeployingOpportunityId(null);
     }
@@ -252,6 +295,86 @@ export default function AdminBlockchainPage() {
               <Button variant="outline" size="sm" onClick={loadInvestments} disabled={isLoading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Deployment Success/Error Message */}
+      {deploymentMessage && (
+        <Card className={deploymentMessage.type === 'success' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-red-500 bg-red-50 dark:bg-red-950/20'}>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3 flex-1">
+                {deploymentMessage.type === 'success' ? (
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
+                )}
+                <div className="flex-1">
+                  <div className={`font-semibold ${deploymentMessage.type === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                    {deploymentMessage.title}
+                  </div>
+                  <div className={`text-sm mt-1 ${deploymentMessage.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                    {deploymentMessage.message}
+                  </div>
+                  {deploymentMessage.type === 'success' && deploymentMessage.contractAddress && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-green-700 dark:text-green-300">
+                          Contract: {formatAddress(deploymentMessage.contractAddress)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={() => copyToClipboard(deploymentMessage.contractAddress!, deploymentMessage.contractAddress!)}
+                          title="Copy contract address"
+                        >
+                          {copiedAddress === deploymentMessage.contractAddress ? (
+                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                        <a
+                          href={getExplorerUrl(deploymentMessage.contractAddress)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-green-600 hover:text-green-700 dark:text-green-400"
+                          title="View on explorer"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                      {deploymentMessage.transactionHash && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-green-700 dark:text-green-300">
+                            TX: {formatAddress(deploymentMessage.transactionHash)}
+                          </span>
+                          <a
+                            href={getExplorerUrl(deploymentMessage.transactionHash, "tx")}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600 hover:text-green-700 dark:text-green-400"
+                            title="View transaction"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setDeploymentMessage(null)}
+              >
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
