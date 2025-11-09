@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { addInvestment } from "@/store/slices/investments";
-import { useInvestmentOpportunitiesDropdown } from "@/hooks/swr/useInvestmentOpportunities";
+import { useInvestmentOpportunitiesDropdown, useInvestmentOpportunities } from "@/hooks/swr/useInvestmentOpportunities";
 import { useUserCreateInvestment } from "@/hooks/swr/useUser";
 import { useUserInvestments } from "@/hooks/swr/useUser";
 import { CheckCircle2, AlertCircle } from "lucide-react";
@@ -42,16 +42,16 @@ export function SubscriptionModal() {
   const { createInvestment, isCreating, error: createError } = useUserCreateInvestment();
   const { mutate: refreshInvestments } = useUserInvestments();
   
-  // Fetch investment opportunities for dropdown
+  // Fetch investment opportunities with full details (including minInvestment)
   // Note: API only accepts single status value, so we fetch all (no status filter)
   // Backend should return active, upcoming, and paused by default
-  const { opportunities, isLoading: isLoadingOpportunities } = useInvestmentOpportunitiesDropdown();
+  const { opportunities: fullOpportunities, isLoading: isLoadingOpportunities } = useInvestmentOpportunities({
+    status: undefined, // Fetch all available statuses
+  });
   
   // Filter out closed opportunities on the client side
-  const availableOpportunities = opportunities.filter(opp => {
-    // Since dropdown API only returns id and title, we can't filter by status client-side
-    // We'll rely on the backend to return appropriate opportunities
-    return true; // Show all opportunities returned by API
+  const availableOpportunities = (fullOpportunities || []).filter(opp => {
+    return opp.status !== "closed";
   });
 
   // Generate dropdown options from API data
@@ -117,12 +117,17 @@ export function SubscriptionModal() {
         // Refresh investments list
         await refreshInvestments();
         
+        // Calculate amount using minInvestment (price per bond) from the selected opportunity
+        const selectedOpp = availableOpportunities.find(opp => opp.id === values.issuance);
+        const pricePerBond = selectedOpp?.minInvestment || 100; // Fallback to 100 if not found
+        const calculatedAmount = values.bonds * pricePerBond;
+        
         // Also update Redux for local state management
         dispatch(
           addInvestment({
             issuance: values.issuance,
             date: new Date().toISOString(),
-            amount: values.bonds * 100,
+            amount: calculatedAmount,
             bonds: values.bonds,
             status: "pending",
           })

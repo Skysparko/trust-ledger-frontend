@@ -149,7 +149,7 @@ export default function AdminBlockchainPage() {
         name: `${opportunity.company} Bond`,
         symbol: `${opportunity.company.substring(0, 3).toUpperCase()}BOND`,
         couponRate: opportunity.rate * 100, // Convert to basis points
-        bondPrice: 100, // Default $100 per bond
+        bondPrice: opportunity.minInvestment, // Use minInvestment as price per bond
       });
 
       if (response.success) {

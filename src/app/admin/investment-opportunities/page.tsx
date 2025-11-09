@@ -96,15 +96,6 @@ const createValidationSchema = (
       .typeError("Price must be a number")
       .min(0, "Price must be greater than 0")
       .required("Price is required"),
-    maxInvestment: Yup.number()
-      .typeError("Total offering must be a number")
-      .min(0, "Total offering must be greater than 0")
-      .nullable()
-      .optional()
-      .test("greater-than-min", "Total offering must be greater than price", function(value) {
-        if (!value) return true;
-        return value > (this.parent.minInvestment || 0);
-      }),
     termMonths: Yup.number()
       .typeError("Term must be a number")
       .min(1, "Term must be at least 1 month")
@@ -259,7 +250,6 @@ export default function AdminInvestmentOpportunitiesPage() {
     shortDescription: "",
     rate: undefined,
     minInvestment: undefined,
-    maxInvestment: undefined,
     termMonths: undefined,
     totalFundingTarget: undefined,
     paymentFrequency: undefined,
@@ -310,6 +300,11 @@ export default function AdminInvestmentOpportunitiesPage() {
           return dateStr ? `${dateStr}T00:00:00Z` : undefined;
         };
 
+        // Calculate total offering as price * total bonds
+        const calculatedMaxInvestment = values.minInvestment && values.totalFundingTarget
+          ? values.minInvestment * values.totalFundingTarget
+          : undefined;
+
         const payload: CreateInvestmentOpportunityPayload = {
           title: values.title!,
           company: values.company!,
@@ -320,7 +315,7 @@ export default function AdminInvestmentOpportunitiesPage() {
           shortDescription: values.shortDescription,
           rate: values.rate!,
           minInvestment: values.minInvestment!,
-          maxInvestment: values.maxInvestment,
+          maxInvestment: calculatedMaxInvestment,
           termMonths: values.termMonths!,
           totalFundingTarget: values.totalFundingTarget!,
           paymentFrequency: values.paymentFrequency as PaymentFrequency,
@@ -609,7 +604,9 @@ export default function AdminInvestmentOpportunitiesPage() {
 
   // Helper to get error className for inputs
   const getInputErrorClass = (fieldName: string): string => {
-    return formik.touched[fieldName] && formik.errors[fieldName]
+    const touched = formik.touched[fieldName as keyof typeof formik.touched];
+    const error = formik.errors[fieldName as keyof typeof formik.errors];
+    return touched && error
       ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/50"
       : "";
   };
@@ -1095,7 +1092,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="minInvestment">Price ($) *</Label>
                   <Input
@@ -1115,23 +1112,6 @@ export default function AdminInvestmentOpportunitiesPage() {
                   />
                   {formik.touched.minInvestment && formik.errors.minInvestment && (
                     <p className="text-xs text-red-500">{formik.errors.minInvestment}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxInvestment">Total Offering ($)</Label>
-                  <Input
-                    id="maxInvestment"
-                    name="maxInvestment"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formik.values.maxInvestment || ""}
-                    onChange={(e) => formik.setFieldValue("maxInvestment", parseFloat(e.target.value) || undefined)}
-                    onBlur={formik.handleBlur}
-                    placeholder="50000"
-                  />
-                  {formik.touched.maxInvestment && formik.errors.maxInvestment && (
-                    <p className="text-xs text-red-500">{formik.errors.maxInvestment}</p>
                   )}
                 </div>
                 <div className="space-y-2">

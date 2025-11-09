@@ -244,7 +244,7 @@ export default function InvestmentOpportunityDetailPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400 mb-2">
                         <DollarSign className="h-4 w-4" />
-                        Minimum Investment
+                        Price
                       </div>
                       <div className="text-2xl font-bold text-zinc-900 dark:text-white">${opportunity.minInvestment.toLocaleString()}</div>
                       <div className="text-xs text-zinc-500 dark:text-zinc-500">Per investor</div>
@@ -261,10 +261,22 @@ export default function InvestmentOpportunityDetailPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400 mb-2">
                           <DollarSign className="h-4 w-4" />
-                          Maximum Investment
+                          Total Offering
                         </div>
                         <div className="text-2xl font-bold text-zinc-900 dark:text-white">${opportunity.maxInvestment.toLocaleString()}</div>
                         <div className="text-xs text-zinc-500 dark:text-zinc-500">Per investor</div>
+                      </div>
+                    )}
+                    {opportunity.totalFundingTarget && opportunity.minInvestment && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400 mb-2">
+                          <Building2 className="h-4 w-4" />
+                          Available Bonds
+                        </div>
+                        <div className="text-2xl font-bold text-zinc-900 dark:text-white">
+                          {Math.floor(opportunity.totalFundingTarget / opportunity.minInvestment).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-500">From Total Bonds</div>
                       </div>
                     )}
                     <div className="space-y-1">
