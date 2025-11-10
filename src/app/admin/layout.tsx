@@ -167,10 +167,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
                     "group relative flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
-                    "hover:bg-zinc-800/50",
                     isActive
-                      ? "bg-zinc-100 text-zinc-900 shadow-lg shadow-black/10"
-                      : "text-zinc-300"
+                      ? "bg-zinc-100 text-zinc-900 shadow-lg shadow-black/10 hover:bg-zinc-200 hover:shadow-xl hover:shadow-black/20"
+                      : "text-zinc-300 hover:bg-zinc-800/50"
                   )}
                 >
                   {isActive && (
@@ -179,7 +178,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <item.icon
                     className={cn(
                       "h-5 w-5 transition-all duration-200",
-                      isActive ? "text-zinc-700" : "text-zinc-400 group-hover:text-zinc-300"
+                      isActive ? "text-zinc-700 group-hover:text-zinc-900" : "text-zinc-400 group-hover:text-zinc-300"
                     )}
                   />
                   <span className="flex-1">{item.name}</span>
