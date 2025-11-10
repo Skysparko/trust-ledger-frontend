@@ -47,10 +47,23 @@ export function DatePicker({
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
       // Format as "yyyy-MM-dd" using local date (not UTC)
+      // Use getFullYear(), getMonth(), getDate() to ensure we get local time values
       const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const formattedDate = `${year}-${month}-${day}`;
+      const month = selectedDate.getMonth() + 1; // getMonth() returns 0-11
+      const day = selectedDate.getDate();
+      
+      // Format with zero-padding
+      const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      
+      // Ensure the formatted date is correct by logging (can remove in production)
+      console.log('DatePicker: Selected date', { 
+        original: selectedDate, 
+        year, 
+        month, 
+        day, 
+        formatted: formattedDate 
+      });
+      
       onChange?.(formattedDate);
     } else {
       onChange?.("");
