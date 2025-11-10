@@ -126,13 +126,27 @@ const createValidationSchema = (
       .oneOf(["active", "upcoming", "closed", "paused"], "Invalid status")
       .default("upcoming"),
     startDate: Yup.string()
-      .required("Start date is required"),
+      .required("Start date is required")
+      .test("before-end", "Start date cannot be after end date", function(value) {
+        if (!value || !this.parent.endDate) return true;
+        const startDate = new Date(value);
+        const endDate = new Date(this.parent.endDate);
+        // Compare dates without time
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+        return startDate <= endDate;
+      }),
     endDate: Yup.string()
       .nullable()
       .optional()
-      .test("after-start", "End date must be after start date", function(value) {
+      .test("after-start", "End date cannot be before start date", function(value) {
         if (!value || !this.parent.startDate) return true;
-        return new Date(value) >= new Date(this.parent.startDate);
+        const startDate = new Date(this.parent.startDate);
+        const endDate = new Date(value);
+        // Compare dates without time
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+        return endDate >= startDate;
       }),
     riskLevel: Yup.string()
       .oneOf(["Low", "Medium", "High"], "Invalid risk level")
@@ -959,7 +973,12 @@ export default function AdminInvestmentOpportunitiesPage() {
                   <DatePicker
                     id="startDate"
                     value={formik.values.startDate || ""}
-                    onChange={(value) => formik.setFieldValue("startDate", value)}
+                    onChange={(value) => {
+                      formik.setFieldValue("startDate", value);
+                      // Trigger validation for both dates when start date changes
+                      formik.validateField("startDate");
+                      formik.validateField("endDate");
+                    }}
                     placeholder="Select start date"
                     className={getInputErrorClass("startDate")}
                   />
@@ -972,8 +991,14 @@ export default function AdminInvestmentOpportunitiesPage() {
                   <DatePicker
                     id="endDate"
                     value={formik.values.endDate || ""}
-                    onChange={(value) => formik.setFieldValue("endDate", value)}
+                    onChange={(value) => {
+                      formik.setFieldValue("endDate", value);
+                      // Trigger validation for both dates when end date changes
+                      formik.validateField("startDate");
+                      formik.validateField("endDate");
+                    }}
                     placeholder="Select end date"
+                    className={getInputErrorClass("endDate")}
                   />
                   {formik.touched.endDate && formik.errors.endDate && (
                     <p className="text-xs text-red-500">{formik.errors.endDate}</p>

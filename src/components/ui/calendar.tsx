@@ -80,14 +80,55 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
-  const [month, setMonth] = React.useState<number>(new Date().getMonth());
-  const [year, setYear] = React.useState<number>(new Date().getFullYear());
+  // Extract onSelect from props to avoid conflicts
+  const { onSelect: propsOnSelect, ...restProps } = props as any;
+  // Initialize month/year from selected date or current date
+  const getInitialMonth = () => {
+    if ('selected' in props && props.selected && props.selected instanceof Date) {
+      return props.selected.getMonth();
+    }
+    if (props.month) {
+      return props.month.getMonth();
+    }
+    return new Date().getMonth();
+  };
+
+  const getInitialYear = () => {
+    if ('selected' in props && props.selected && props.selected instanceof Date) {
+      return props.selected.getFullYear();
+    }
+    if (props.month) {
+      return props.month.getFullYear();
+    }
+    return new Date().getFullYear();
+  };
+
+  const [month, setMonth] = React.useState<number>(getInitialMonth());
+  const [year, setYear] = React.useState<number>(getInitialYear());
+  // Track if user has manually changed month/year to prioritize local state
+  const [userChangedView, setUserChangedView] = React.useState(false);
   
-  // Generate year range (current year ± 10 years)
+  // Generate year range dynamically - always include wide range to allow navigation to any future year
+  // The range expands dynamically as user navigates to new years
   const years = React.useMemo(() => {
     const currentYear = new Date().getFullYear();
-    return Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
-  }, []);
+    
+    // Get all relevant years: current view year, selected date year, current year
+    const relevantYears = [currentYear, year];
+    
+    if ('selected' in props && props.selected && props.selected instanceof Date) {
+      relevantYears.push(props.selected.getFullYear());
+    }
+    if (props.month) {
+      relevantYears.push(props.month.getFullYear());
+    }
+    
+    // Always include a wide range: from 10 years before the earliest to 50 years after the latest
+    // This ensures users can always navigate to future years from any starting point
+    const minYear = Math.min(...relevantYears) - 10;
+    const maxYear = Math.max(...relevantYears) + 50;
+    return Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i);
+  }, ['selected' in props ? props.selected : null, props.month, year]);
   
   const months = React.useMemo(() => {
     return [
@@ -114,9 +155,10 @@ function Calendar({
       document.head.removeChild(style);
     };
   }, []);
-
+  
   const handleMonthChange = (newMonth: number) => {
     setMonth(newMonth);
+    setUserChangedView(true);
     const newDate = new Date(year, newMonth, 1);
     if (props.onMonthChange) {
       props.onMonthChange(newDate);
@@ -125,31 +167,99 @@ function Calendar({
   
   const handleYearChange = (newYear: number) => {
     setYear(newYear);
+    setUserChangedView(true);
     const newDate = new Date(newYear, month, 1);
     if (props.onMonthChange) {
       props.onMonthChange(newDate);
     }
   };
   
-  // Update month/year when props change
+  // Update month/year when selected date or month prop changes
+  // BUT only if user hasn't manually changed the view (to prevent resetting user's year selection)
   React.useEffect(() => {
-    if (props.month) {
-      setMonth(props.month.getMonth());
-      setYear(props.month.getFullYear());
+    // Don't override user's manual changes - only sync if user hasn't changed the view
+    if (userChangedView) {
+      return; // User has manually changed year/month, don't reset it
     }
-  }, [props.month]);
+    
+    if ('selected' in props && props.selected && props.selected instanceof Date) {
+      const selectedMonth = props.selected.getMonth();
+      const selectedYear = props.selected.getFullYear();
+      if (month !== selectedMonth || year !== selectedYear) {
+        setMonth(selectedMonth);
+        setYear(selectedYear);
+      }
+    } else if (props.month) {
+      const propMonth = props.month.getMonth();
+      const propYear = props.month.getFullYear();
+      if (month !== propMonth || year !== propYear) {
+        setMonth(propMonth);
+        setYear(propYear);
+      }
+    }
+  }, ['selected' in props ? props.selected : null, props.month, userChangedView, month, year]);
+
+  // Ensure month prop is always in sync with local state
+  const currentMonth = React.useMemo(() => {
+    return new Date(year, month, 1);
+  }, [year, month]);
+
+  // Determine which month to use - prioritize local state if user changed view
+  const displayMonth = React.useMemo(() => {
+    if (userChangedView) {
+      return currentMonth;
+    }
+    return props.month || currentMonth;
+  }, [props.month, currentMonth, userChangedView]);
+
+  // Intercept onSelect to ALWAYS use the current calendar view's year
+  // This fixes the issue where clicking a day might use the wrong year from the old selected date
+  // react-day-picker might construct dates with the old selected date's year, so we force it to use current view's year
+  const handleSelect = React.useCallback((selectedDate: Date | undefined) => {
+    if (selectedDate) {
+      const selectedDay = selectedDate.getDate();
+      const selectedMonth = selectedDate.getMonth();
+      
+      // ALWAYS use the current view's year, regardless of what year the selectedDate has
+      // This ensures that when user changes year to 2027 and clicks a day, it uses 2027, not 2025
+      // Preserve the month and day from the clicked date (handles adjacent month days correctly)
+      // Set time to noon to avoid timezone issues when converting to string
+      const correctedDate = new Date(year, selectedMonth, selectedDay, 12, 0, 0, 0);
+      
+      // Debug logging to verify correct year is being used
+      console.log('Calendar: Date selection', {
+        selectedDateYear: selectedDate.getFullYear(),
+        currentViewYear: year,
+        selectedMonth,
+        selectedDay,
+        correctedDate: correctedDate.toISOString(),
+        correctedYear: correctedDate.getFullYear()
+      });
+      
+      // Reset userChangedView flag after selection so calendar can sync with new selected date
+      setUserChangedView(false);
+      
+      propsOnSelect?.(correctedDate);
+    } else {
+      propsOnSelect?.(selectedDate);
+    }
+  }, [propsOnSelect, year]);
 
   return (
     <div className={cn("relative", className)}>
       <DayPicker
         showOutsideDays={showOutsideDays}
         captionLayout="dropdown"
-        month={props.month || new Date(year, month, 1)}
+        month={displayMonth}
         onMonthChange={(date) => {
-          setMonth(date.getMonth());
-          setYear(date.getFullYear());
+          const newMonth = date.getMonth();
+          const newYear = date.getFullYear();
+          // Only update if different to avoid unnecessary re-renders
+          if (month !== newMonth) setMonth(newMonth);
+          if (year !== newYear) setYear(newYear);
           props.onMonthChange?.(date);
         }}
+        onSelect={handleSelect as any}
         className="p-4"
         classNames={{
           months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
@@ -193,7 +303,7 @@ function Calendar({
             return <Icon className="h-4 w-4 text-zinc-400 dark:text-zinc-400" />;
           },
         }}
-      {...props}
+      {...restProps}
       />
       {/* Custom dropdowns positioned over the native ones */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20 pointer-events-auto">
