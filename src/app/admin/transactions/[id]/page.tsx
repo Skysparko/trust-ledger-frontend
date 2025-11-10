@@ -36,29 +36,63 @@ export default function TransactionDetailPage() {
   );
   const { confirmInvestment, isConfirming } = useConfirmInvestment();
   const { cancelInvestment, isCancelling } = useAdminCancelInvestment();
-  const [actionError, setActionError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const handleConfirm = async () => {
-    if (!transactionId) return;
-    setActionError(null);
+    if (!transactionId || !transaction) return;
+    
+    // Check if investment opportunity is active before confirming
+    const rawTransaction = transaction as any;
+    const investmentOpportunity = rawTransaction?.investmentOpportunity;
+    if (investmentOpportunity && investmentOpportunity.status !== "active") {
+      // The button should already be disabled, but show a toast if somehow clicked
+      if (typeof window !== "undefined") {
+        import("sonner").then(({ toast }) => {
+          toast.error("Cannot Confirm", {
+            description: "Investment opportunity is not active",
+            duration: 5000,
+          });
+        });
+      }
+      return;
+    }
+    
+    // Validate funding target before confirming
+    if (investmentOpportunity) {
+      const investment = rawTransaction?.investment;
+      const investmentAmount = investment?.amount || (investment?.bonds || 0) * (investmentOpportunity.minInvestment || 100);
+      const remainingFunding = investmentOpportunity.maxInvestment - investmentOpportunity.currentFunding;
+      
+      if (investmentAmount > remainingFunding) {
+        if (typeof window !== "undefined") {
+          import("sonner").then(({ toast }) => {
+            toast.error("Cannot Confirm Investment", {
+              description: `Investment amount ($${investmentAmount.toLocaleString()}) exceeds remaining funding target ($${remainingFunding.toLocaleString()})`,
+              duration: 5000,
+            });
+          });
+        }
+        return;
+      }
+    }
+    
     try {
       await confirmInvestment({ id: transactionId });
       await mutate(); // Refresh the transaction data
     } catch (err: any) {
-      setActionError(err.message || "Failed to confirm transaction");
+      // Error toast is already shown by axios interceptor
       console.error("Failed to confirm transaction:", err);
     }
   };
 
   const handleCancel = async () => {
     if (!transactionId) return;
-    setActionError(null);
     try {
       await cancelInvestment({ id: transactionId });
       await mutate(); // Refresh the transaction data
     } catch (err: any) {
-      setActionError(err.message || "Failed to cancel transaction");
+      // Error toast is already shown by axios interceptor
       console.error("Failed to cancel transaction:", err);
     }
   };
@@ -86,10 +120,57 @@ export default function TransactionDetailPage() {
     return method.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
-  const canConfirm = transaction?.status?.toLowerCase() === "pending";
+  // Extract nested data from raw transaction (if available)
+  const rawTransaction = transaction as any;
+  const user = rawTransaction?.user;
+  const investment = rawTransaction?.investment;
+  const investmentOpportunity = rawTransaction?.investmentOpportunity;
+  
+  // Check if investment opportunity is active
+  const isOpportunityActive = investmentOpportunity?.status === "active";
+  
+  // Check if investment would exceed funding target
+  const wouldExceedFunding = (() => {
+    if (!investmentOpportunity) return false;
+    const investment = rawTransaction?.investment;
+    const investmentAmount = investment?.amount || (investment?.bonds || 0) * (investmentOpportunity.minInvestment || 100);
+    const remainingFunding = investmentOpportunity.maxInvestment - investmentOpportunity.currentFunding;
+    return investmentAmount > remainingFunding;
+  })();
+  
+  const canConfirm = 
+    transaction?.status?.toLowerCase() === "pending" && 
+    isOpportunityActive &&
+    !wouldExceedFunding;
   const canCancel =
     transaction?.status?.toLowerCase() === "pending" ||
     transaction?.status?.toLowerCase() === "confirmed";
+  
+  // Get the reason why confirm button is disabled
+  const getConfirmDisabledReason = (): string | null => {
+    if (isConfirming || isCancelling) {
+      return "Transaction is being processed";
+    }
+    if (transaction?.status?.toLowerCase() !== "pending") {
+      return `Transaction status is "${transaction?.status}" - only pending transactions can be confirmed`;
+    }
+    if (!isOpportunityActive) {
+      const status = investmentOpportunity?.status || "unknown";
+      return `Investment opportunity is not active (status: ${status}) - only active opportunities can be confirmed`;
+    }
+    if (wouldExceedFunding && investmentOpportunity) {
+      const investment = rawTransaction?.investment;
+      const investmentAmount = investment?.amount || (investment?.bonds || 0) * (investmentOpportunity.minInvestment || 100);
+      console.log("investmentAmount", investmentAmount);
+      console.log("investmentOpportunity.maxInvestment", investmentOpportunity.maxInvestment);
+      console.log("investmentOpportunity.currentFunding", investmentOpportunity.currentFunding);
+      const remainingFunding = investmentOpportunity.maxInvestment - investmentOpportunity.currentFunding;
+      return `Investment amount ($${investmentAmount.toLocaleString()}) exceeds remaining funding target ($${remainingFunding.toLocaleString()})`;
+    }
+    return null;
+  };
+  
+  const confirmDisabledReason = getConfirmDisabledReason();
   
   // Hide actions if transaction is in a final/completed state
   const isCompleted = 
@@ -97,12 +178,6 @@ export default function TransactionDetailPage() {
     transaction?.status?.toLowerCase() === "failed" ||
     transaction?.status?.toLowerCase() === "refunded" ||
     transaction?.status?.toLowerCase() === "cancelled";
-
-  // Extract nested data from raw transaction (if available)
-  const rawTransaction = transaction as any;
-  const user = rawTransaction?.user;
-  const investment = rawTransaction?.investment;
-  const investmentOpportunity = rawTransaction?.investmentOpportunity;
   const userProfile = user?.profile;
   const bankDetails = userProfile?.bank;
 
@@ -201,14 +276,6 @@ export default function TransactionDetailPage() {
         </Badge>
       </div>
 
-      {actionError && (
-        <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20">
-          <CardContent className="pt-6">
-            <p className="text-red-600 dark:text-red-400">{actionError}</p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Action Buttons - Only show if transaction is not in a final state */}
       {!isCompleted && (
         <Card>
@@ -217,23 +284,45 @@ export default function TransactionDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
-              <Button
-                onClick={handleConfirm}
-                disabled={!canConfirm || isConfirming || isCancelling}
-                className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg shadow-green-600/20 hover:shadow-green-600/30 transition-all duration-200 font-semibold px-6 py-2.5"
+              <div 
+                className="relative inline-block"
+                onMouseEnter={() => {
+                  if (confirmDisabledReason) {
+                    setShowTooltip(true);
+                  }
+                }}
+                onMouseLeave={() => {
+                  setShowTooltip(false);
+                }}
               >
-                {isConfirming ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Confirming...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Confirm Transaction
-                  </>
+                <Button
+                  onClick={handleConfirm}
+                  disabled={!canConfirm || isConfirming || isCancelling}
+                  className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-lg shadow-green-600/20 hover:shadow-green-600/30 transition-all duration-200 font-semibold px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isConfirming ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Confirming...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Confirm Transaction
+                    </>
+                  )}
+                </Button>
+                {confirmDisabledReason && showTooltip && (
+                  <div 
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-4 py-2.5 bg-zinc-900/95 backdrop-blur-sm text-white text-sm rounded-lg shadow-2xl border border-zinc-700/50 pointer-events-none z-[100] max-w-sm whitespace-normal text-left animate-in fade-in-0 zoom-in-95 duration-200"
+                  >
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+                      <div className="border-4 border-transparent border-t-zinc-900/95"></div>
+                    </div>
+                    <p className="text-zinc-100 leading-relaxed">{confirmDisabledReason}</p>
+                  </div>
                 )}
-              </Button>
+              </div>
               <Button
                 onClick={handleCancel}
                 disabled={!canCancel || isConfirming || isCancelling}

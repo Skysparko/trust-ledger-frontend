@@ -315,7 +315,15 @@ axiosInstance.interceptors.response.use(
         data: error.response?.data,
       });
     }
-    // Handle 401 Unauthorized - redirect to login
+    
+    // Extract error message from response
+    const errorMessage = 
+      (error.response?.data as any)?.message ||
+      (error.response?.data as any)?.error ||
+      error.message ||
+      "An unexpected error occurred";
+    
+    // Handle 401 Unauthorized - redirect to login (don't show toast for 401)
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
         // Clear auth data
@@ -339,14 +347,36 @@ axiosInstance.interceptors.response.use(
           }, 100);
         }
       }
+    } else {
+      // Show toast notification for all other API errors (only in browser)
+      if (typeof window !== "undefined") {
+        // Dynamically import toast to avoid SSR issues
+        import("sonner").then(({ toast }) => {
+          // Determine toast title based on status code
+          let title = "Error";
+          if (error.response?.status === 403) {
+            title = "Access Denied";
+          } else if (error.response?.status === 404) {
+            title = "Not Found";
+          } else if (error.response?.status === 422) {
+            title = "Validation Error";
+          } else if (error.response?.status === 500) {
+            title = "Server Error";
+          } else if (error.response?.status) {
+            title = `Error ${error.response.status}`;
+          }
+          
+          // Show error toast
+          toast.error(title, {
+            description: errorMessage,
+            duration: 5000,
+          });
+        }).catch(() => {
+          // Silently fail if toast can't be imported (shouldn't happen in browser)
+          console.error("Failed to show error toast:", errorMessage);
+        });
+      }
     }
-    
-    // Extract error message from response
-    const errorMessage = 
-      (error.response?.data as any)?.message ||
-      (error.response?.data as any)?.error ||
-      error.message ||
-      "An unexpected error occurred";
     
     // Create enhanced error with message
     const enhancedError = new Error(errorMessage);

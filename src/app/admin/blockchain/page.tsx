@@ -215,6 +215,7 @@ export default function AdminBlockchainPage() {
     }
   };
 
+  // Client-side pagination for blockchain investments (since API doesn't support pagination)
   const paginatedItems = filteredInvestments.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { Button } from "@/components/ui/button";
@@ -102,9 +102,19 @@ export default function AdminWebinarsPage() {
   const { updateWebinar, isUpdating } = useUpdateWebinar();
   const { deleteWebinar, isDeleting } = useDeleteWebinar();
 
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [searchQuery]);
+
   // Ensure paginatedItems is always an array
   const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
-  const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
+  // API handles pagination, so we use items directly
+  // If we have a full page of items, assume there might be more pages
+  const hasMorePages = paginatedItems.length === ITEMS_PER_PAGE;
+  const totalPages = hasMorePages ? currentPage + 1 : currentPage;
 
   const getInitialValues = (item?: AdminWebinar | null): Partial<CreateAdminWebinarPayload> => {
     if (item) {
@@ -274,27 +284,27 @@ export default function AdminWebinarsPage() {
             </TableBody>
           </Table>
 
-          {totalPages > 1 && (
+          {(totalPages > 1 || currentPage > 1 || hasMorePages) && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-zinc-500">
                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
-                {filteredItems.length} webinars
+                {(currentPage - 1) * ITEMS_PER_PAGE + paginatedItems.length}
+                {hasMorePages && " (more available)"}
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || isLoading}
                 >
                   Previous
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={!hasMorePages || isLoading}
                 >
                   Next
                 </Button>

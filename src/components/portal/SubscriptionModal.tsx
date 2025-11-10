@@ -13,7 +13,7 @@ import { addInvestment } from "@/store/slices/investments";
 import { useInvestmentOpportunitiesDropdown, useInvestmentOpportunities } from "@/hooks/swr/useInvestmentOpportunities";
 import { useUserCreateInvestment } from "@/hooks/swr/useUser";
 import { useUserInvestments } from "@/hooks/swr/useUser";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { WalletConnect } from "@/components/wallet/WalletConnect";
 
@@ -35,7 +35,6 @@ export function SubscriptionModal() {
   const { subscriptionOpen, subscriptionDefaults } = useAppSelector((s) => s.ui);
   const dispatch = useAppDispatch();
   const [confirm, setConfirm] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { address: walletAddress, isConnected: isWalletConnected } = useAccount();
   
   // API hooks
@@ -100,9 +99,40 @@ export function SubscriptionModal() {
     },
     validationSchema,
     enableReinitialize: true,
-    onSubmit: async (values, { setSubmitting }) => {
+    onSubmit: async (values, { setSubmitting, setFieldError }) => {
       try {
-        setError(null);
+        // Get the selected investment opportunity
+        const selectedOpp = availableOpportunities.find(opp => opp.id === values.issuance);
+        if (!selectedOpp) {
+          setFieldError("issuance", "Please select a valid investment opportunity");
+          setSubmitting(false);
+          return;
+        }
+        
+        // Validate funding target before submitting
+        const pricePerBond = selectedOpp.minInvestment || 100;
+        const investmentAmount = values.bonds * pricePerBond;
+        const remainingFunding = selectedOpp.maxInvestment! - selectedOpp.currentFunding;
+        
+        if (investmentAmount > remainingFunding) {
+          const maxBonds = Math.floor(remainingFunding / pricePerBond);
+          setFieldError(
+            "bonds",
+            `Investment exceeds funding target. Maximum ${maxBonds} bond${maxBonds !== 1 ? 's' : ''} available ($${remainingFunding.toLocaleString()} remaining)`
+          );
+          setSubmitting(false);
+          
+          // Show toast notification
+          if (typeof window !== "undefined") {
+            import("sonner").then(({ toast }) => {
+              toast.error("Investment Exceeds Funding Target", {
+                description: `Maximum ${maxBonds} bond${maxBonds !== 1 ? 's' : ''} available. Remaining funding: $${remainingFunding.toLocaleString()}`,
+                duration: 5000,
+              });
+            });
+          }
+          return;
+        }
         
         // Call the API to create investment
         const payload = {
@@ -118,8 +148,7 @@ export function SubscriptionModal() {
         await refreshInvestments();
         
         // Calculate amount using minInvestment (price per bond) from the selected opportunity
-        const selectedOpp = availableOpportunities.find(opp => opp.id === values.issuance);
-        const pricePerBond = selectedOpp?.minInvestment || 100; // Fallback to 100 if not found
+        // (selectedOpp is already defined above, reuse it)
         const calculatedAmount = values.bonds * pricePerBond;
         
         // Also update Redux for local state management
@@ -135,8 +164,7 @@ export function SubscriptionModal() {
         
         setConfirm(true);
       } catch (err: any) {
-        const errorMessage = err?.message || "Failed to create investment. Please try again.";
-        setError(errorMessage);
+        // Error toast is already shown by axios interceptor
         console.error("Investment creation error:", err);
       } finally {
         setSubmitting(false);
@@ -155,19 +183,10 @@ export function SubscriptionModal() {
   useEffect(() => {
     if (!subscriptionOpen) {
       setConfirm(false);
-      setError(null);
       formik.resetForm();
       formik.setFieldValue("bonds", 10);
     }
   }, [subscriptionOpen]);
-
-  // Update error from API hook
-  useEffect(() => {
-    if (createError) {
-      const errorMessage = (createError as any)?.message || "Failed to create investment. Please try again.";
-      setError(errorMessage);
-    }
-  }, [createError]);
 
   if (!subscriptionOpen) return null;
 
@@ -254,12 +273,6 @@ export function SubscriptionModal() {
                   <p className="text-xs text-red-400">{formik.errors.method}</p>
                 )}
               </div>
-              {error && (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-                  <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm">{error}</p>
-                </div>
-              )}
               <div className="pt-4 border-t border-zinc-800/50 flex justify-end gap-3">
                 <Button 
                   type="button"

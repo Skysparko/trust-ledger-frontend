@@ -38,16 +38,21 @@ export default function AdminUsersPage() {
   const { updateUserKycStatus } = useUpdateUserKycStatus();
   const { updateUserStatus } = useUpdateUserStatus();
 
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [searchQuery, kycFilter, statusFilter]);
+
   // Ensure items is always an array
   const filteredItems = Array.isArray(items) ? items : [];
 
-  // Remove client-side filtering since API handles it
-  // Note: API handles pagination, so we use all items for now
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItemsForDisplay = filteredItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  // API handles pagination, so we use items directly
+  // If we have a full page of items, assume there might be more pages
+  const hasMorePages = filteredItems.length === ITEMS_PER_PAGE;
+  const totalPages = hasMorePages ? currentPage + 1 : currentPage;
+  const paginatedItemsForDisplay = filteredItems;
 
   const handleKycApprove = async (id: string) => {
     try {
@@ -212,27 +217,27 @@ export default function AdminUsersPage() {
             </TableBody>
           </Table>
 
-          {totalPages > 1 && (
+          {(totalPages > 1 || currentPage > 1 || hasMorePages) && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-zinc-500">
                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
-                {filteredItems.length} users
+                {(currentPage - 1) * ITEMS_PER_PAGE + filteredItems.length}
+                {hasMorePages && " (more available)"}
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || isLoading}
                 >
                   Previous
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={!hasMorePages || isLoading}
                 >
                   Next
                 </Button>
