@@ -423,8 +423,10 @@ export default function AdminInvestmentOpportunitiesPage() {
     fetchOpportunities();
   }, [currentPage, searchQuery]);
 
-  const totalPages = pagination.totalPages || Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  // API handles pagination, use pagination metadata if available
+  const totalPages = pagination.totalPages || (pagination.total ? Math.ceil(pagination.total / ITEMS_PER_PAGE) : currentPage + 1);
   const paginatedItems = filteredItems; // Backend handles pagination
+  const hasMorePages = pagination.totalPages ? currentPage < pagination.totalPages : filteredItems.length === ITEMS_PER_PAGE;
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -711,7 +713,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                       <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      ${(item.currentFunding / 1000).toFixed(0)}K / ${(item.totalFundingTarget / 1000).toFixed(0)}K
+                      ${(item.currentFunding / 1000).toFixed(0)}K / ${(item.maxInvestment! / 1000).toFixed(0)}K
                       <span className="text-xs text-zinc-500 ml-1">
                         ({item.fundingProgress.toFixed(1)}%)
                       </span>
@@ -732,12 +734,13 @@ export default function AdminInvestmentOpportunitiesPage() {
             </TableBody>
           </Table>
 
-          {totalPages > 1 && (
+          {(totalPages > 1 || currentPage > 1 || hasMorePages) && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-zinc-500">
                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, pagination.total || filteredItems.length)} of{" "}
-                {pagination.total || filteredItems.length} opportunities
+                {(currentPage - 1) * ITEMS_PER_PAGE + paginatedItems.length}
+                {pagination.total && ` of ${pagination.total}`}
+                {!pagination.total && hasMorePages && " (more available)"}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -751,8 +754,8 @@ export default function AdminInvestmentOpportunitiesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages || isFetching}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={!hasMorePages || isFetching}
                 >
                   Next
                 </Button>
@@ -1513,7 +1516,7 @@ export default function AdminInvestmentOpportunitiesPage() {
                 Next
               </Button>
             ) : (
-              <Button type="submit" disabled={isLoading || formik.isSubmitting}>
+              <Button type="button" onClick={() => formik.handleSubmit()} disabled={isLoading || formik.isSubmitting}>
                 {getNextButtonText()}
               </Button>
             )}

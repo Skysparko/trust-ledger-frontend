@@ -28,13 +28,13 @@ export function Footer() {
           <div className="text-sm font-semibold">Company</div>
           <ul className="space-y-1 text-sm">
             <li>
-              <Link href="/projecten">Projects</Link>
+              <Link href="/projects">Projects</Link>
             </li>
             <li>
               <Link href="/uitgiften">Investment Opportunities</Link>
             </li>
             <li>
-              <Link href="/kennis">Knowledge</Link>
+              <Link href="/knowledge">Knowledge</Link>
             </li>
             <li>
               <Link href="/webinars">Webinars</Link>

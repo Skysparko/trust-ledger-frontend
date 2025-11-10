@@ -4,8 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MapPin, Calendar, DollarSign, TrendingUp, Building2, Users, Shield, FileText, Clock, CheckCircle2, Info, Globe, AlertTriangle } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowLeft, MapPin, Calendar, DollarSign, TrendingUp, Building2, Users, Shield, FileText, Clock, CheckCircle2, Info, Globe, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
 import { useInvestmentOpportunity } from "@/hooks/swr/useInvestmentOpportunities";
 import { motion } from "framer-motion";
 
@@ -15,6 +15,54 @@ export default function InvestmentOpportunityDetailPage() {
   const opportunityId = params.id as string;
   
   const { opportunity, isLoading, isError, error } = useInvestmentOpportunity(opportunityId);
+  const [logoError, setLogoError] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Reset logo error when opportunity changes
+  useEffect(() => {
+    setLogoError(false);
+  }, [opportunity?.logo]);
+
+  // Get all images including thumbnail
+  const allImages = useMemo(() => {
+    if (!opportunity) return [];
+    const images: string[] = [];
+    
+    // Add thumbnail first if it exists
+    if (opportunity.thumbnailImage) {
+      images.push(opportunity.thumbnailImage);
+    }
+    
+    // Add all images from the array (allow duplicates)
+    if (opportunity.images && opportunity.images.length > 0) {
+      opportunity.images.forEach(img => {
+        if (img) {
+          images.push(img);
+        }
+      });
+    }
+    
+    console.log('[Carousel Debug]', {
+      thumbnailImage: opportunity.thumbnailImage,
+      imagesArray: opportunity.images,
+      allImages: images,
+      count: images.length
+    });
+    return images;
+  }, [opportunity]);
+
+  // Reset image index when opportunity changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [opportunity?.id]);
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  };
 
   // Use actual data from API
   const totalAmount = opportunity?.currentFunding || 0;
@@ -22,8 +70,8 @@ export default function InvestmentOpportunityDetailPage() {
   const remainingAmount = opportunity ? opportunity.totalFundingTarget - opportunity.currentFunding : 0;
 
   const progressPercentage = useMemo(() => {
-    if (!opportunity || opportunity.totalFundingTarget === 0) return 0;
-    return Math.round(((opportunity.currentFunding / opportunity.totalFundingTarget) * 100));
+    if (!opportunity || opportunity.maxInvestment === 0) return 0;
+    return Math.round(((opportunity.currentFunding / opportunity.maxInvestment!) * 100));
   }, [opportunity]);
 
   if (isLoading) {
@@ -106,26 +154,86 @@ export default function InvestmentOpportunityDetailPage() {
           Back to Opportunities
         </Button>
 
-        {/* Hero Header */}
+        {/* Combined Hero Header and Progress Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-gradient-to-br from-white via-zinc-50 to-white shadow-xl dark:border-zinc-800/50 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-zinc-900/90"
+          className="relative overflow-hidden rounded-2xl border border-zinc-200 shadow-xl dark:border-zinc-800/50"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
+          {/* Background Image / Carousel */}
+          {allImages.length > 0 ? (
+            <>
+              <div 
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500"
+                style={{
+                  backgroundImage: `url(${allImages[currentImageIndex]})`
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900/85 via-zinc-900/75 to-zinc-900/85 dark:from-zinc-950/90 dark:via-zinc-950/85 dark:to-zinc-950/90" />
+              
+              {/* Carousel Controls - Only show if more than 1 image */}
+              {allImages.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-50 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm p-2 text-white transition-all duration-200 hover:scale-110"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-50 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm p-2 text-white transition-all duration-200 hover:scale-110"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                  
+                  {/* Carousel Dots */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2">
+                    {allImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`h-2 rounded-full transition-all duration-200 ${
+                          index === currentImageIndex
+                            ? 'w-8 bg-white'
+                            : 'w-2 bg-white/50 hover:bg-white/75'
+                        }`}
+                        aria-label={`Go to image ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50 to-white dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-zinc-900/90" />
+          )}
+
+          {/* Hero Header Content */}
           <div className="relative p-8">
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
               <div className="flex-1">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl ring-2 bg-blue-500/10 ring-blue-500/20 dark:bg-blue-500/10 dark:ring-blue-500/20">
-                    <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-xl ring-2 bg-white/10 dark:bg-white/5 ring-blue-500/20 dark:ring-blue-500/20 backdrop-blur-sm overflow-hidden">
+                    {opportunity.logo && !logoError ? (
+                      <img 
+                        src={opportunity.logo} 
+                        alt={opportunity.title}
+                        className="h-full w-full object-contain p-1.5"
+                        onError={() => setLogoError(true)}
+                      />
+                    ) : (
+                      <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                    )}
                   </div>
                   <div className="flex-1">
-                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-3">
+                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-3">
                       {opportunity.title}
                     </h1>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-300 dark:text-zinc-300">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
                         <span>{opportunity.location}</span>
@@ -147,36 +255,28 @@ export default function InvestmentOpportunityDetailPage() {
                 </div>
               </div>
               <div className="rounded-xl bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-blue-500/10 border border-blue-500/20 px-8 py-6 text-center backdrop-blur-sm dark:from-blue-500/20 dark:via-cyan-500/20 dark:to-blue-500/10">
-                <div className="text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-cyan-400">
+                <div className="text-5xl font-extrabold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                   {opportunity.rate}%
                 </div>
-                <div className="mt-2 text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                <div className="mt-2 text-xs font-semibold uppercase tracking-wider text-white">
                   Annual Interest Rate
                 </div>
               </div>
             </div>
           </div>
-        </motion.div>
 
-        {/* Progress Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          <Card className="mt-6 border-zinc-200 bg-white shadow-xl dark:border-zinc-800/50 dark:bg-zinc-900/90">
-            <CardHeader className="pb-4 border-b border-zinc-200 dark:border-zinc-800/50">
-              <CardTitle className="text-sm font-semibold uppercase tracking-[0.1em] text-zinc-600 dark:text-zinc-300">
+          {/* Progress Card Footer */}
+          <div className="relative mt-24">
+            <div className="p-5 py-6">
+              <CardTitle className="text-sm font-semibold uppercase tracking-[0.1em] text-white mb-3">
                 Funding Progress
               </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-600 dark:text-zinc-400">Funding Progress</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white">{progressPercentage}%</span>
+                  <span className="text-zinc-300 dark:text-zinc-300">Funding Progress</span>
+                  <span className="font-semibold text-white">{progressPercentage}%</span>
                 </div>
-                <div className="relative h-3 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800/50">
+                <div className="relative h-3 overflow-hidden rounded-full bg-zinc-800/50 dark:bg-zinc-800/50">
                   <div 
                     className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
                     style={{ width: `${progressPercentage}%` }}
@@ -184,27 +284,27 @@ export default function InvestmentOpportunityDetailPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div>
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">Total Raised</div>
-                    <div className="text-lg font-bold text-zinc-900 dark:text-white">${opportunity.currentFunding.toLocaleString()}</div>
+                    <div className="text-xs text-zinc-300 dark:text-zinc-300 mb-1">Total Raised</div>
+                    <div className="text-lg font-bold text-white">${opportunity.currentFunding.toLocaleString()}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">Target</div>
-                    <div className="text-lg font-bold text-zinc-900 dark:text-white">${opportunity.totalFundingTarget.toLocaleString()}</div>
+                    <div className="text-xs text-zinc-300 dark:text-zinc-300 mb-1">Target</div>
+                    <div className="text-lg font-bold text-white">${opportunity.maxInvestment!.toLocaleString()}</div>
                   </div>
                 </div>
                 {opportunity.endDate && (
-                  <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800/50">
+                  <div className="pt-3 border-t border-zinc-700/50 dark:border-zinc-700/50">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-600 dark:text-zinc-400">Investment Period</span>
-                      <span className="text-zinc-900 dark:text-white font-medium">
+                      <span className="text-zinc-300 dark:text-zinc-300">Investment Period</span>
+                      <span className="text-white font-medium">
                         Until {new Date(opportunity.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </span>
                     </div>
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
 
         {/* Main Grid */}

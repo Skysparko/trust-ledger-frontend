@@ -55,7 +55,7 @@ export function Hero() {
             <Link href="/uitgiften">View Investment Opportunities</Link>
           </Button>
           <Button size="lg" variant="outline" className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" asChild>
-            <Link href="/projecten">View projects</Link>
+            <Link href="/projects">View projects</Link>
           </Button>
         </motion.div>
       </div>

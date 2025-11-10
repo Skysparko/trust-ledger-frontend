@@ -51,3 +51,347 @@ body {
     transform: translateY(-2px);
   }
 }
+
+/* Toast Animations */
+@keyframes toast-slide-in-right {
+  from {
+    transform: translateX(calc(100% + 16px));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(calc(100% + 16px));
+    opacity: 0;
+  }
+}
+
+@keyframes toast-slide-in-top {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+    scale: 0.95;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes toast-slide-out-top {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+    scale: 0.95;
+  }
+}
+
+@keyframes toast-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes toast-fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* Sonner Toast Custom Styles */
+[data-sonner-toaster] {
+  --width: 356px;
+  --toast-gap: 12px;
+}
+
+[data-sonner-toast] {
+  animation: toast-slide-in-right 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+  transition: all 0.3s cubic-bezier(0.21, 1.02, 0.73, 1);
+  will-change: transform, opacity;
+}
+
+[data-sonner-toast][data-swiping="true"] {
+  transform: translateX(var(--radix-toast-swipe-move-x));
+}
+
+[data-sonner-toast][data-swipe="end"] {
+  animation: toast-slide-out-right 0.2s ease-out forwards;
+}
+
+[data-sonner-toast][data-expanded="false"][data-index="0"] {
+  --y: 0;
+  scale: 0.95;
+  opacity: 0.8;
+}
+
+[data-sonner-toast]:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.6), 
+              0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: all 0.2s cubic-bezier(0.21, 1.02, 0.73, 1);
+}
+
+[data-sonner-toast][data-styled="true"] {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 10px 30px -10px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Error toast specific glow */
+[data-sonner-toast][data-type="error"] {
+  box-shadow: 
+    0 10px 30px -10px rgba(239, 68, 68, 0.2),
+    0 0 0 1px rgba(239, 68, 68, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-sonner-toast][data-type="error"]:hover {
+  box-shadow: 
+    0 20px 40px -12px rgba(239, 68, 68, 0.3),
+    0 0 0 1px rgba(239, 68, 68, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Success toast specific glow */
+[data-sonner-toast][data-type="success"] {
+  box-shadow: 
+    0 10px 30px -10px rgba(34, 197, 94, 0.2),
+    0 0 0 1px rgba(34, 197, 94, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-sonner-toast][data-type="success"]:hover {
+  box-shadow: 
+    0 20px 40px -12px rgba(34, 197, 94, 0.3),
+    0 0 0 1px rgba(34, 197, 94, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Warning toast specific glow */
+[data-sonner-toast][data-type="warning"] {
+  box-shadow: 
+    0 10px 30px -10px rgba(234, 179, 8, 0.2),
+    0 0 0 1px rgba(234, 179, 8, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-sonner-toast][data-type="warning"]:hover {
+  box-shadow: 
+    0 20px 40px -12px rgba(234, 179, 8, 0.3),
+    0 0 0 1px rgba(234, 179, 8, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Info toast specific glow */
+[data-sonner-toast][data-type="info"] {
+  box-shadow: 
+    0 10px 30px -10px rgba(59, 130, 246, 0.2),
+    0 0 0 1px rgba(59, 130, 246, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-sonner-toast][data-type="info"]:hover {
+  box-shadow: 
+    0 20px 40px -12px rgba(59, 130, 246, 0.3),
+    0 0 0 1px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Progress bar animation */
+[data-sonner-toast] [data-progress] {
+  animation: toast-progress linear forwards;
+}
+
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Icon animations */
+[data-sonner-toast] [data-icon] {
+  animation: toast-icon-bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes toast-icon-bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Custom Toast Classes */
+.toast-custom {
+  background: linear-gradient(to bottom right, rgb(24 24 27 / 0.95), rgb(9 9 11 / 0.95)) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(63, 63, 70, 0.5) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 
+    0 10px 30px -10px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  color: rgb(244, 244, 245) !important;
+  font-weight: 500 !important;
+  padding: 1rem !important;
+}
+
+.toast-title {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: rgb(244, 244, 245) !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.toast-description {
+  font-size: 0.875rem !important;
+  color: rgb(161, 161, 170) !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+}
+
+.toast-action-button {
+  background: rgb(39, 39, 42) !important;
+  color: rgb(244, 244, 245) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.toast-action-button:hover {
+  background: rgb(63, 63, 70) !important;
+  transform: translateY(-1px) !important;
+}
+
+.toast-cancel-button {
+  background: rgba(39, 39, 42, 0.5) !important;
+  color: rgb(161, 161, 170) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.toast-cancel-button:hover {
+  background: rgb(39, 39, 42) !important;
+  color: rgb(244, 244, 245) !important;
+}
+
+.toast-close-button {
+  background: rgba(39, 39, 42, 0.5) !important;
+  color: rgb(161, 161, 170) !important;
+  border: 1px solid rgba(63, 63, 70, 0.5) !important;
+  border-radius: 0.375rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.toast-close-button:hover {
+  background: rgb(63, 63, 70) !important;
+  color: rgb(244, 244, 245) !important;
+  border-color: rgb(63, 63, 70) !important;
+}
+
+.toast-error {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: linear-gradient(to bottom right, rgba(127, 29, 29, 0.2), rgb(9 9 11 / 0.95)) !important;
+  box-shadow: 
+    0 10px 30px -10px rgba(239, 68, 68, 0.2),
+    0 0 0 1px rgba(239, 68, 68, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.toast-error:hover {
+  box-shadow: 
+    0 20px 40px -12px rgba(239, 68, 68, 0.3),
+    0 0 0 1px rgba(239, 68, 68, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.toast-success {
+  border-color: rgba(34, 197, 94, 0.3) !important;
+  background: linear-gradient(to bottom right, rgba(20, 83, 45, 0.2), rgb(9 9 11 / 0.95)) !important;
+  box-shadow: 
+    0 10px 30px -10px rgba(34, 197, 94, 0.2),
+    0 0 0 1px rgba(34, 197, 94, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.toast-success:hover {
+  box-shadow: 
+    0 20px 40px -12px rgba(34, 197, 94, 0.3),
+    0 0 0 1px rgba(34, 197, 94, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.toast-warning {
+  border-color: rgba(234, 179, 8, 0.3) !important;
+  background: linear-gradient(to bottom right, rgba(113, 63, 18, 0.2), rgb(9 9 11 / 0.95)) !important;
+  box-shadow: 
+    0 10px 30px -10px rgba(234, 179, 8, 0.2),
+    0 0 0 1px rgba(234, 179, 8, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.toast-warning:hover {
+  box-shadow: 
+    0 20px 40px -12px rgba(234, 179, 8, 0.3),
+    0 0 0 1px rgba(234, 179, 8, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.toast-info {
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  background: linear-gradient(to bottom right, rgba(30, 58, 138, 0.2), rgb(9 9 11 / 0.95)) !important;
+  box-shadow: 
+    0 10px 30px -10px rgba(59, 130, 246, 0.2),
+    0 0 0 1px rgba(59, 130, 246, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.toast-info:hover {
+  box-shadow: 
+    0 20px 40px -12px rgba(59, 130, 246, 0.3),
+    0 0 0 1px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Tooltip styles for disabled buttons */
+.tooltip-visible > div[class*="absolute"][class*="bottom-full"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}

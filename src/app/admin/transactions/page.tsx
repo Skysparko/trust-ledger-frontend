@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,13 @@ export default function AdminTransactionsPage() {
 
   const { exportTransactions, isExporting } = useExportTransactions();
 
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [searchQuery, statusFilter, paymentMethodFilter]);
+
   const handleExport = async () => {
     try {
       const blob = await exportTransactions({ format: "csv" });
@@ -56,7 +63,10 @@ export default function AdminTransactionsPage() {
 
   // Ensure paginatedItems is always an array
   const paginatedItems = Array.isArray(filteredItems) ? filteredItems : [];
-  const totalPages = Math.ceil(paginatedItems.length / ITEMS_PER_PAGE);
+  // API handles pagination, so we use items directly
+  // If we have a full page of items, assume there might be more pages
+  const hasMorePages = paginatedItems.length === ITEMS_PER_PAGE;
+  const totalPages = hasMorePages ? currentPage + 1 : currentPage;
 
   const getStatusColor = (status: string) => {
     const normalizedStatus = status.toLowerCase();
@@ -215,27 +225,27 @@ export default function AdminTransactionsPage() {
             </TableBody>
           </Table>
 
-          {totalPages > 1 && (
+          {(totalPages > 1 || currentPage > 1 || hasMorePages) && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-zinc-500">
                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, paginatedItems.length)} of{" "}
-                {paginatedItems.length} transactions
+                {(currentPage - 1) * ITEMS_PER_PAGE + paginatedItems.length}
+                {hasMorePages && " (more available)"}
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || isLoading}
                 >
                   Previous
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={!hasMorePages || isLoading}
                 >
                   Next
                 </Button>
