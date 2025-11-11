@@ -90,15 +90,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Get current page title from pathname
   const getPageTitle = () => {
     if (pathname === "/admin") return "Dashboard";
-    const route = navigation.find((item) => pathname?.startsWith(item.href));
+    // Sort by href length (longest first) to match more specific routes first
+    const sortedRoutes = [...navigation].sort((a, b) => b.href.length - a.href.length);
+    const route = sortedRoutes.find((item) => pathname?.startsWith(item.href));
     return route?.name || "Admin";
+  };
+
+  // Get page-specific subtitle
+  const getPageSubtitle = () => {
+    if (pathname === "/admin") {
+      return "Welcome back! Here's an overview of your platform.";
+    }
+    const title = getPageTitle();
+    const subtitles: Record<string, string> = {
+      "Investment Opportunities": "Manage all investment opportunities on the platform",
+      "Projects": "Manage and monitor projects from this page",
+      "Blog/News": "Manage and monitor blog posts and news from this page",
+      "Webinars": "Manage and monitor webinars from this page",
+      "Documents": "Manage and monitor documents from this page",
+      "Users": "Manage and monitor users from this page",
+      "Transactions": "Manage and monitor transactions from this page",
+      "Blockchain": "Manage and monitor blockchain from this page",
+    };
+    return subtitles[title] || `Manage and monitor ${title.toLowerCase()} from this page`;
   };
 
   // Get breadcrumbs
   const getBreadcrumbs = () => {
     const crumbs = [{ label: "Dashboard", href: "/admin" }];
     if (pathname !== "/admin") {
-      const route = navigation.find((item) => pathname?.startsWith(item.href) && item.href !== "/admin");
+      // Sort by href length (longest first) to match more specific routes first
+      const sortedRoutes = [...navigation].sort((a, b) => b.href.length - a.href.length);
+      const route = sortedRoutes.find((item) => pathname?.startsWith(item.href) && item.href !== "/admin");
       if (route) {
         crumbs.push({ label: route.name, href: route.href });
       }
@@ -273,17 +296,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-gradient-to-b from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
           <div className="mx-auto max-w-7xl p-6 lg:p-8">
-            {/* Desktop Page Title */}
-            <div className="mb-6 hidden md:block">
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                {getPageTitle()}
-              </h1>
-              {pathname !== "/admin" && (
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  Manage and monitor {getPageTitle().toLowerCase()} from this page
-                </p>
-              )}
-            </div>
             <div>{children}</div>
           </div>
         </main>
