@@ -19,6 +19,10 @@ const validationSchema = Yup.object({
   token: Yup.string().required("Token is required"),
   newPassword: Yup.string()
     .min(8, "Password must be at least 8 characters")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+    )
     .required("Password is required"),
 });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useFormik } from "formik";
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AuthApi } from "@/api/auth.api";
 import { fadeUp } from "@/lib/motion";
-import { User, Building2 } from "lucide-react";
+import { User, Building2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -27,14 +28,15 @@ const validationSchema = Yup.object({
   password: Yup.string()
     .min(8, "Password must be at least 8 characters")
     .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
     )
     .required("Password is required"),
 });
 
 export default function SignupPage() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -232,16 +234,26 @@ export default function SignupPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    name="password"
-                    placeholder="Create a password"
-                    value={formik.values.password}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    className={formik.touched.password && formik.errors.password ? "border-red-500" : ""}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      placeholder="Create a password"
+                      value={formik.values.password}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      className={`pr-10 ${formik.touched.password && formik.errors.password ? "border-red-500" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {formik.touched.password && formik.errors.password && (
                     <motion.p
                       initial={{ opacity: 0, y: -5 }}

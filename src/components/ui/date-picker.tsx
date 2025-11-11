@@ -32,36 +32,66 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
   
   // Parse date value - handle both "yyyy-MM-dd" and ISO format strings
+  // Always use local time to avoid timezone issues
   const date = React.useMemo(() => {
     if (!value) return undefined;
-    // If it's already in "yyyy-MM-dd" format, parse it directly
+    // If it's already in "yyyy-MM-dd" format, parse it directly using local time
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const [year, month, day] = value.split('-').map(Number);
-      return new Date(year, month - 1, day);
+      // Create date at noon local time to avoid timezone shifts
+      // month is 1-12 in the string, but Date constructor expects 0-11
+      const parsedDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+      
+      // Verify the parsed date matches the input - if not, there's a serious issue
+      const verifyYear = parsedDate.getFullYear();
+      const verifyMonth = parsedDate.getMonth() + 1;
+      const verifyDay = parsedDate.getDate();
+      
+      if (verifyYear !== year || verifyMonth !== month || verifyDay !== day) {
+        console.error('DatePicker: Date parsing mismatch!', {
+          input: value,
+          expected: { year, month, day },
+          parsed: { year: verifyYear, month: verifyMonth, day: verifyDay }
+        });
+      } else {
+        // Debug: Log successful parsing
+        console.log('DatePicker: Date parsed successfully', {
+          input: value,
+          parsed: { year: verifyYear, month: verifyMonth, day: verifyDay },
+          displayFormat: format(parsedDate, "PPP")
+        });
+      }
+      
+      return parsedDate;
     }
     // Otherwise, parse as ISO string and extract date part
+    // If it's an ISO string, extract the date components to avoid timezone issues
     const parsed = new Date(value);
-    return isNaN(parsed.getTime()) ? undefined : parsed;
+    if (isNaN(parsed.getTime())) return undefined;
+    // Extract date components using local time methods and create a new date in local time
+    // This ensures we always work with local dates, never UTC
+    const year = parsed.getFullYear();
+    const month = parsed.getMonth();
+    const day = parsed.getDate();
+    return new Date(year, month, day, 12, 0, 0, 0);
   }, [value]);
 
   const handleSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
-      // Format as "yyyy-MM-dd" using local date (not UTC)
-      // Use getFullYear(), getMonth(), getDate() to ensure we get local time values
+      // CRITICAL: Extract date components using local time methods
+      // getFullYear(), getMonth(), getDate() always return local time values
       const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth() + 1; // getMonth() returns 0-11
+      const month = selectedDate.getMonth() + 1; // getMonth() returns 0-11, so add 1 for display
       const day = selectedDate.getDate();
       
-      // Format with zero-padding
+      // Format with zero-padding as "yyyy-MM-dd"
       const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       
-      // Ensure the formatted date is correct by logging (can remove in production)
-      console.log('DatePicker: Selected date', { 
-        original: selectedDate, 
-        year, 
-        month, 
-        day, 
-        formatted: formattedDate 
+      // Debug: Log what we're storing
+      console.log('DatePicker handleSelect:', {
+        receivedDate: selectedDate.toString(),
+        extracted: { year, month, day },
+        formatted: formattedDate
       });
       
       onChange?.(formattedDate);
@@ -95,6 +125,7 @@ export function DatePicker({
           mode="single"
           selected={date}
           onSelect={handleSelect}
+          month={date} // Ensure calendar shows the month of the selected date
           initialFocus
         />
       </PopoverContent>

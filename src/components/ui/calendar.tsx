@@ -212,38 +212,90 @@ function Calendar({
     return props.month || currentMonth;
   }, [props.month, currentMonth, userChangedView]);
 
-  // Intercept onSelect to ALWAYS use the current calendar view's year
-  // This fixes the issue where clicking a day might use the wrong year from the old selected date
-  // react-day-picker might construct dates with the old selected date's year, so we force it to use current view's year
+  // Intercept onSelect to ensure the correct date is selected
+  // CRITICAL FIX: react-day-picker may pass dates with incorrect year/month
+  // SOLUTION: Always use the CURRENT VIEW's year and month (from our internal state)
+  // and only use the day from the selectedDate. This guarantees we use the year/month
+  // that the user is actually viewing, not what react-day-picker thinks it is.
   const handleSelect = React.useCallback((selectedDate: Date | undefined) => {
     if (selectedDate) {
+      // Extract the day from the selected date
       const selectedDay = selectedDate.getDate();
-      const selectedMonth = selectedDate.getMonth();
       
-      // ALWAYS use the current view's year, regardless of what year the selectedDate has
-      // This ensures that when user changes year to 2027 and clicks a day, it uses 2027, not 2025
-      // Preserve the month and day from the clicked date (handles adjacent month days correctly)
-      // Set time to noon to avoid timezone issues when converting to string
-      const correctedDate = new Date(year, selectedMonth, selectedDay, 12, 0, 0, 0);
+      // CRITICAL FIX: Always use the current view's year and month
+      // The user navigated to a specific year/month (e.g., April 2026), so we MUST use that
+      // react-day-picker might pass a date with the wrong year/month, but we know what
+      // the user is viewing, so we use that instead
+      const viewYear = year;
+      const viewMonth = month; // 0-11
       
-      // Debug logging to verify correct year is being used
-      console.log('Calendar: Date selection', {
-        selectedDateYear: selectedDate.getFullYear(),
-        currentViewYear: year,
-        selectedMonth,
-        selectedDay,
-        correctedDate: correctedDate.toISOString(),
-        correctedYear: correctedDate.getFullYear()
-      });
+      // Check if the selected date is from an adjacent month (previous/next month days shown in calendar)
+      const selectedDateMonth = selectedDate.getMonth();
+      const selectedDateYear = selectedDate.getFullYear();
+      const isAdjacentMonth = selectedDateMonth !== viewMonth || selectedDateYear !== viewYear;
       
-      // Reset userChangedView flag after selection so calendar can sync with new selected date
+      let finalYear = viewYear;
+      let finalMonth = viewMonth;
+      
+      // Only adjust if it's clearly an adjacent month day (within 1 month difference)
+      if (isAdjacentMonth) {
+        const monthDiff = selectedDateMonth - viewMonth;
+        
+        // Handle year rollover cases
+        if (monthDiff === 11 && viewMonth === 0) {
+          // Selected is December, view is January - use previous year, December
+          finalYear = viewYear - 1;
+          finalMonth = 11;
+        } else if (monthDiff === -11 && viewMonth === 11) {
+          // Selected is January, view is December - use next year, January
+          finalYear = viewYear + 1;
+          finalMonth = 0;
+        } else if (Math.abs(monthDiff) === 1) {
+          // Adjacent month within same year
+          finalMonth = selectedDateMonth;
+          finalYear = viewYear;
+        }
+        // Otherwise, use the view's year/month (the selected date's year/month is wrong)
+      }
+      
+      // Create a new date object using the determined year, month, and the selected day
+      // Set time to noon to avoid any edge cases with midnight timezone conversions
+      const correctedDate = new Date(finalYear, finalMonth, selectedDay, 12, 0, 0, 0);
+      
+      // Verify the corrected date matches what we intended
+      const verifyYear = correctedDate.getFullYear();
+      const verifyMonth = correctedDate.getMonth();
+      const verifyDay = correctedDate.getDate();
+      
+      if (verifyYear !== finalYear || 
+          verifyMonth !== finalMonth || 
+          verifyDay !== selectedDay) {
+        console.error('Calendar: Date construction error!', {
+          intended: { year: finalYear, month: finalMonth + 1, day: selectedDay },
+          actual: { year: verifyYear, month: verifyMonth + 1, day: verifyDay },
+          viewState: { year: viewYear, month: viewMonth + 1 },
+          reactDayPickerDate: { 
+            year: selectedDateYear, 
+            month: selectedDateMonth + 1, 
+            day: selectedDay 
+          }
+        });
+      }
+      
+      // Update the view to match the selected date (if it's from an adjacent month)
+      if (finalYear !== year || finalMonth !== month) {
+        setYear(finalYear);
+        setMonth(finalMonth);
+      }
+      
+      // Reset userChangedView flag after selection
       setUserChangedView(false);
       
       propsOnSelect?.(correctedDate);
     } else {
       propsOnSelect?.(selectedDate);
     }
-  }, [propsOnSelect, year]);
+  }, [propsOnSelect, year, month]);
 
   return (
     <div className={cn("relative", className)}>

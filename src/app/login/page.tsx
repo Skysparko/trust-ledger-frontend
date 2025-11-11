@@ -13,7 +13,7 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { hydrateFromStorage, loginSuccess } from "@/store/slices/auth";
 import { AuthApi } from "@/api/auth.api";
 import { fadeUp } from "@/lib/motion";
-import { LogIn } from "lucide-react";
+import { LogIn, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -31,6 +31,7 @@ export default function LoginPage() {
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const [isHydrating, setIsHydrating] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     dispatch(hydrateFromStorage());
@@ -182,16 +183,26 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    name="password"
-                    placeholder="Enter your password"
-                    value={formik.values.password}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    className={formik.touched.password && formik.errors.password ? "border-red-500" : ""}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      placeholder="Enter your password"
+                      value={formik.values.password}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      className={`pr-10 ${formik.touched.password && formik.errors.password ? "border-red-500" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {formik.touched.password && formik.errors.password && (
                     <motion.p
                       initial={{ opacity: 0, y: -5 }}
