@@ -25,8 +25,9 @@ const validationSchema = Yup.object({
   issuance: Yup.string()
     .required("Please select an investment opportunity"),
   bonds: Yup.number()
-    .min(1, "Number of bonds must be at least 1")
-    .required("Number of bonds is required"),
+    .typeError("Number of bonds must be a number")
+    .required("Number of bonds is required")
+    .min(1, "Number of bonds must be at least 1"),
   method: Yup.string()
     .required("Payment method is required"),
 });
@@ -250,8 +251,16 @@ export function SubscriptionModal() {
                   name="bonds"
                   type="number" 
                   min={1} 
-                  value={formik.values.bonds} 
-                  onChange={(e) => formik.setFieldValue("bonds", parseInt(e.target.value || "0", 10))}
+                  value={formik.values.bonds === 0 || formik.values.bonds === undefined ? "" : formik.values.bonds} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || val === null || val === undefined) {
+                      formik.setFieldValue("bonds", undefined);
+                    } else {
+                      const numVal = parseInt(val, 10);
+                      formik.setFieldValue("bonds", isNaN(numVal) ? undefined : numVal);
+                    }
+                  }}
                   onBlur={formik.handleBlur}
                   className={`bg-zinc-800/50 border-zinc-700 text-white ${
                     formik.touched.bonds && formik.errors.bonds ? "border-red-500" : ""
