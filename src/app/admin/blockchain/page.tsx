@@ -68,14 +68,15 @@ export default function AdminBlockchainPage() {
 
   useEffect(() => {
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       const filtered = investments.filter(
         (inv) =>
-          inv.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          inv.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          inv.opportunityTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          inv.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          inv.contractAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (inv.walletAddress && inv.walletAddress.toLowerCase().includes(searchQuery.toLowerCase()))
+          (inv.userEmail && inv.userEmail.toLowerCase().includes(query)) ||
+          (inv.userName && inv.userName.toLowerCase().includes(query)) ||
+          (inv.opportunityTitle && inv.opportunityTitle.toLowerCase().includes(query)) ||
+          (inv.company && inv.company.toLowerCase().includes(query)) ||
+          (inv.contractAddress && inv.contractAddress.toLowerCase().includes(query)) ||
+          (inv.walletAddress && inv.walletAddress.toLowerCase().includes(query))
       );
       setFilteredInvestments(filtered);
       setCurrentPage(1);
