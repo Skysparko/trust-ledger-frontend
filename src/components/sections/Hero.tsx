@@ -52,7 +52,7 @@ export function Hero() {
           transition={{ delay: 0.25, duration: 0.7, ease: "easeOut" }}
         >
           <Button size="lg" className="shadow-lg shadow-blue-500/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30" asChild>
-            <Link href="/uitgiften">View Investment Opportunities</Link>
+            <Link href="/opportunities">View Investment Opportunities</Link>
           </Button>
           <Button size="lg" variant="outline" className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" asChild>
             <Link href="/projects">View projects</Link>

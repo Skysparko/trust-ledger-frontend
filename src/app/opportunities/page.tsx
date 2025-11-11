@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import { SectionHeader } from "@/components/sections/SectionHeader";
 import { staggerContainer } from "@/lib/motion";
 
-export default function UitgiftenPage() {
+export default function OpportunitiesPage() {
   const [status, setStatus] = useState<string>("all");
   const [sector, setSector] = useState<string>("all");
   const [riskLevel, setRiskLevel] = useState<string>("all");

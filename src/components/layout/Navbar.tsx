@@ -12,7 +12,7 @@ import { hydrateFromStorage, logout } from "@/store/slices/auth";
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/uitgiften", label: "Investment Opportunities" },
+  { href: "/opportunities", label: "Investment Opportunities" },
   { href: "/projects", label: "Projects" },
   { href: "/knowledge", label: "Knowledge" },
   { href: "/webinars", label: "Webinars" },
@@ -169,7 +169,7 @@ export function Navbar() {
                 <Link href="/login">Login</Link>
               </Button>
               <Button asChild className="hidden translate-y-0 lg:inline-flex hover:-translate-y-0.5">
-                <Link href="/uitgiften">Get started</Link>
+                <Link href="/opportunities">Get started</Link>
               </Button>
             </>
           )}
@@ -249,7 +249,7 @@ export function Navbar() {
                     <Link href="/login" onClick={() => setOpen(false)}>Login</Link>
                   </Button>
                   <Button asChild variant="outline" className="flex-1">
-                    <Link href="/uitgiften" onClick={() => setOpen(false)}>Get started</Link>
+                    <Link href="/opportunities" onClick={() => setOpen(false)}>Get started</Link>
                   </Button>
                 </div>
               )}

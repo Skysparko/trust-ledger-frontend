@@ -31,7 +31,7 @@ export function InvestmentOpportunityCard({ opportunity }: { opportunity: Invest
       return;
     }
     // Route to portal if authenticated, otherwise to public page
-    const url = isAuthenticated ? `/portal/issues/${opportunity.id}` : `/uitgiften/${opportunity.id}`;
+    const url = isAuthenticated ? `/portal/issues/${opportunity.id}` : `/opportunities/${opportunity.id}`;
     console.log("[InvestmentOpportunityCard] Navigating to:", url, "ID:", opportunity.id, "Authenticated:", isAuthenticated);
     router.push(url);
   };
