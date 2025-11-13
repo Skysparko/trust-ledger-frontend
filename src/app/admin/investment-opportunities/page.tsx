@@ -227,6 +227,7 @@ export default function AdminInvestmentOpportunitiesPage() {
   const [activeTab, setActiveTab] = useState("basic");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [tagsInputValue, setTagsInputValue] = useState<string>("");
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -437,6 +438,14 @@ export default function AdminInvestmentOpportunitiesPage() {
     fetchOpportunities();
   }, [currentPage, searchQuery]);
 
+  // Sync tags input value when formik tags change (e.g., when editing)
+  useEffect(() => {
+    const tagsArray = formik.values.tags || [];
+    const newValue = Array.isArray(tagsArray) ? tagsArray.join(", ") : "";
+    setTagsInputValue(newValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formik.values.tags]);
+
   // API handles pagination, use pagination metadata if available
   const totalPages = pagination.totalPages || (pagination.total ? Math.ceil(pagination.total / ITEMS_PER_PAGE) : currentPage + 1);
   const paginatedItems = filteredItems; // Backend handles pagination
@@ -445,6 +454,7 @@ export default function AdminInvestmentOpportunitiesPage() {
   const handleCreate = () => {
     setEditingItem(null);
     formik.resetForm({ values: getInitialValues() });
+    setTagsInputValue("");
     setActiveTab("basic");
     setIsDialogOpen(true);
   };
@@ -1417,21 +1427,32 @@ export default function AdminInvestmentOpportunitiesPage() {
               <div className="space-y-2">
                 <Label>Tags (comma-separated)</Label>
                 <Input
-                  value={(formik.values.tags || []).join(", ")}
+                  value={tagsInputValue}
                   onChange={(e) => {
+                    setTagsInputValue(e.target.value);
+                  }}
+                  onBlur={(e) => {
                     const inputValue = e.target.value;
                     const parsedTags = inputValue
                       .split(",")
                       .map(t => t.trim())
                       .filter(t => t.length > 0);
                     formik.setFieldValue("tags", parsedTags);
+                    // Update input to show the parsed tags (removes extra spaces)
+                    setTagsInputValue(parsedTags.join(", "));
                   }}
-                  onBlur={(e) => {
-                    const parsedTags = e.target.value
-                      .split(",")
-                      .map(t => t.trim())
-                      .filter(t => t.length > 0);
-                    formik.setFieldValue("tags", parsedTags);
+                  onKeyDown={(e) => {
+                    // Parse tags when Enter is pressed
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const inputValue = tagsInputValue;
+                      const parsedTags = inputValue
+                        .split(",")
+                        .map(t => t.trim())
+                        .filter(t => t.length > 0);
+                      formik.setFieldValue("tags", parsedTags);
+                      setTagsInputValue(parsedTags.join(", "));
+                    }
                   }}
                   placeholder="tag1, tag2, tag3"
                 />
