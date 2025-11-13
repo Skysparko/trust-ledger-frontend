@@ -213,52 +213,20 @@ function Calendar({
   }, [props.month, currentMonth, userChangedView]);
 
   // Intercept onSelect to ensure the correct date is selected
-  // CRITICAL FIX: react-day-picker may pass dates with incorrect year/month
-  // SOLUTION: Always use the CURRENT VIEW's year and month (from our internal state)
-  // and only use the day from the selectedDate. This guarantees we use the year/month
-  // that the user is actually viewing, not what react-day-picker thinks it is.
+  // CRITICAL FIX: Always use the view month/year to avoid react-day-picker date bugs
+  // The view month/year is what the user is actually looking at, so we trust that
   const handleSelect = React.useCallback((selectedDate: Date | undefined) => {
     if (selectedDate) {
-      // Extract the day from the selected date
+      // Extract the day from the selected date (this is reliable)
       const selectedDay = selectedDate.getDate();
       
-      // CRITICAL FIX: Always use the current view's year and month
-      // The user navigated to a specific year/month (e.g., April 2026), so we MUST use that
-      // react-day-picker might pass a date with the wrong year/month, but we know what
-      // the user is viewing, so we use that instead
-      const viewYear = year;
-      const viewMonth = month; // 0-11
+      // ALWAYS use the current view month/year (what the user is viewing)
+      // This is the most reliable approach - the user navigated to a specific month,
+      // so when they click a day, it should be in that month
+      const finalYear = year;
+      const finalMonth = month; // 0-11
       
-      // Check if the selected date is from an adjacent month (previous/next month days shown in calendar)
-      const selectedDateMonth = selectedDate.getMonth();
-      const selectedDateYear = selectedDate.getFullYear();
-      const isAdjacentMonth = selectedDateMonth !== viewMonth || selectedDateYear !== viewYear;
-      
-      let finalYear = viewYear;
-      let finalMonth = viewMonth;
-      
-      // Only adjust if it's clearly an adjacent month day (within 1 month difference)
-      if (isAdjacentMonth) {
-        const monthDiff = selectedDateMonth - viewMonth;
-        
-        // Handle year rollover cases
-        if (monthDiff === 11 && viewMonth === 0) {
-          // Selected is December, view is January - use previous year, December
-          finalYear = viewYear - 1;
-          finalMonth = 11;
-        } else if (monthDiff === -11 && viewMonth === 11) {
-          // Selected is January, view is December - use next year, January
-          finalYear = viewYear + 1;
-          finalMonth = 0;
-        } else if (Math.abs(monthDiff) === 1) {
-          // Adjacent month within same year
-          finalMonth = selectedDateMonth;
-          finalYear = viewYear;
-        }
-        // Otherwise, use the view's year/month (the selected date's year/month is wrong)
-      }
-      
-      // Create a new date object using the determined year, month, and the selected day
+      // Create a new date object using the view month/year and the selected day
       // Set time to noon to avoid any edge cases with midnight timezone conversions
       const correctedDate = new Date(finalYear, finalMonth, selectedDay, 12, 0, 0, 0);
       
@@ -273,19 +241,8 @@ function Calendar({
         console.error('Calendar: Date construction error!', {
           intended: { year: finalYear, month: finalMonth + 1, day: selectedDay },
           actual: { year: verifyYear, month: verifyMonth + 1, day: verifyDay },
-          viewState: { year: viewYear, month: viewMonth + 1 },
-          reactDayPickerDate: { 
-            year: selectedDateYear, 
-            month: selectedDateMonth + 1, 
-            day: selectedDay 
-          }
+          viewState: { year, month: month + 1 }
         });
-      }
-      
-      // Update the view to match the selected date (if it's from an adjacent month)
-      if (finalYear !== year || finalMonth !== month) {
-        setYear(finalYear);
-        setMonth(finalMonth);
       }
       
       // Reset userChangedView flag after selection
